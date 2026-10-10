@@ -140,10 +140,10 @@ UNI2-h is frozen; classifier trained on PCam features; Nemotron only reads numbe
 All GPU work runs on the GX10 (SSH access available). Code goes through git (models/data are gitignored and never committed). On the GX10: `git clone`, `bash setup.sh`, `hf auth login`, `bash fetch_data.sh` (downloads UNI2-h, PCam, demo slides + XML into the config.py layout). Fallback if GX10 internet is slow: rsync from Anant's laptop.
 
 ## Checklist
-- [ ] Anant: load UNI2-h, run 10 PCam tiles
-- [ ] Anant: extract_pcam_features.py + train_classifier.py on ~2,000 tiles
-- [ ] Anant: process_slide.py on normal_108, every 10th tile
-- [ ] Anant: XML annotation parser in eval/
+- [x] Anant: load UNI2-h, run 10 PCam tiles
+- [x] Anant: extract_pcam_features.py + train_classifier.py (30k train, PCam test acc 95.0%, AUC 0.988)
+- [x] Anant: process_slide.py on normal_108 and tumor_091, full slides (laptop)
+- [x] Anant: XML annotation parser in eval/ + compare_annotations.py
 - [ ] Pranav: server.py serving a slide via DeepZoomGenerator in OpenSeadragon
 - [ ] Pranav: heatmap overlay from the sample heatmap, alignment checked
 - [ ] Pranav: queue polling index.json
