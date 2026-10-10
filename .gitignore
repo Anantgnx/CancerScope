@@ -1,0 +1,13 @@
+# large / generated, never commit (model licenses forbid redistributing weights)
+models/
+data/
+cache/
+outputs/*
+!outputs/_sample/
+
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+.DS_Store
+*.log

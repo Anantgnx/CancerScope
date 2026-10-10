@@ -1,0 +1,16 @@
+# torch: install separately on the GX10 (aarch64 + CUDA wheel), see setup.sh
+torch
+timm>=1.0
+huggingface_hub
+openslide-python>=1.4
+openslide-bin        # bundled OpenSlide binaries (x86_64 + aarch64); apt is the fallback
+numpy
+pillow
+scipy
+scikit-image
+scikit-learn
+pandas
+pyarrow
+flask
+openai               # client for the local OpenAI-compatible LLM server
+tqdm

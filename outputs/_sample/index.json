@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "slides": [
+    {
+      "slide_id": "tumor_091",
+      "filename": "tumor_091.tif",
+      "status": "done",
+      "urgency_score": 7.0,
+      "category": "Micrometastasis",
+      "gb_processed": 0.546,
+      "output_path": "tumor_091"
+    },
+    {
+      "slide_id": "tumor_075",
+      "filename": "tumor_075.tif",
+      "status": "done",
+      "urgency_score": 10.0,
+      "category": "Macrometastasis",
+      "gb_processed": 0.937,
+      "output_path": "tumor_075"
+    },
+    {
+      "slide_id": "normal_108",
+      "filename": "normal_108.tif",
+      "status": "done",
+      "urgency_score": 0.0,
+      "category": "Negative",
+      "gb_processed": 0.327,
+      "output_path": "normal_108"
+    },
+    {
+      "slide_id": "tumor_084",
+      "filename": "tumor_084.tif",
+      "status": "processing",
+      "urgency_score": null,
+      "category": null,
+      "gb_processed": 0.0,
+      "output_path": "tumor_084"
+    },
+    {
+      "slide_id": "normal_042",
+      "filename": "normal_042.tif",
+      "status": "queued",
+      "urgency_score": null,
+      "category": null,
+      "gb_processed": 0.0,
+      "output_path": "normal_042"
+    }
+  ]
+}

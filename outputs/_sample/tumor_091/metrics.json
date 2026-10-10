@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "slide_id": "tumor_091",
+  "filename": "tumor_091.tif",
+  "status": "done",
+  "tumor_detected": true,
+  "urgency_score": 7.0,
+  "category": "Micrometastasis",
+  "total_tissue_area_mm2": 36.78,
+  "tumor_area_mm2": 2.36,
+  "tumor_percentage": 6.43,
+  "num_tumor_regions": 4,
+  "largest_region_mm2": 1.0272,
+  "largest_region_extent_mm": 1.217,
+  "max_confidence": 1.0,
+  "mean_confidence": 0.8216,
+  "regions": [
+    {
+      "id": 1,
+      "area_mm2": 1.0272,
+      "max_confidence": 1.0,
+      "centroid_px": [
+        35000,
+        32318
+      ],
+      "bbox_px": [
+        32256,
+        29568,
+        37248,
+        34944
+      ]
+    },
+    {
+      "id": 2,
+      "area_mm2": 0.6647,
+      "max_confidence": 1.0,
+      "centroid_px": [
+        39735,
+        36811
+      ],
+      "bbox_px": [
+        36864,
+        34560,
+        42240,
+        38784
+      ]
+    },
+    {
+      "id": 3,
+      "area_mm2": 0.4834,
+      "max_confidence": 1.0,
+      "centroid_px": [
+        47340,
+        31338
+      ],
+      "bbox_px": [
+        45696,
+        29568,
+        49152,
+        33408
+      ]
+    },
+    {
+      "id": 4,
+      "area_mm2": 0.1888,
+      "max_confidence": 0.9435,
+      "centroid_px": [
+        47255,
+        20912
+      ],
+      "bbox_px": [
+        46080,
+        19584,
+        48384,
+        22272
+      ]
+    }
+  ],
+  "slide_width_px": 61440,
+  "slide_height_px": 53760,
+  "mpp": 0.22632,
+  "heatmap_downsample": 384,
+  "heatmap_width": 160,
+  "heatmap_height": 140,
+  "model": "SAMPLE (fake heatmap from annotation)",
+  "gb_processed": 0.546,
+  "processing_time_sec": 72.9
+}
