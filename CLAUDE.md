@@ -110,6 +110,7 @@ UNI2-h is frozen; classifier trained on PCam features; Nemotron only reads numbe
 - Queue polls `/api/index`, sorts by urgency, thumbnail, category badge, score, spinner, counter.
 - Viewer: OpenSeadragon + heatmap overlay stretched to `slide_width_px`, opacity slider, region buttons zooming to `bbox_px`.
 - llm_copilot.py: Nemotron via local OpenAI-compatible API; prompt includes metrics.json and "only state numbers present in this data". Demo reports pre-generated.
+- **Nemotron on the GX10 (verified Oct 10):** Ollama service at `http://localhost:11434/v1` (OpenAI-compatible). Models: `nemotron3:33b` (27 GB, use this; 32.7 GB loaded), `nemotron-3-super` (86 GB), backups `qwen3.6:35b`, `gemma4:26b`. It is a reasoning model: **disable thinking** (`reasoning_effort: "none"` on /v1, or `"think": false` on /api/chat), otherwise the token budget goes to hidden reasoning and `content` comes back empty. Warm: ~2–3 s per 130-token report; cold load ~60 s, so warm it up before demoing. Test draft kept every number correct but added an unsupported claim ("exceeds typical benign thresholds"): prompt must forbid claims not in the data, and check that every number in the reply appears in metrics.json.
 
 ## Evaluation (Anant)
 1. Tile: PCam test accuracy + AUC (headline). 2. Slide: tumor slides flagged, normals low (sanity, 10 slides). 3. Region: rasterize XML to heatmap resolution, overlap, side-by-side image.
@@ -148,4 +149,4 @@ All GPU work runs on the GX10 (SSH access available). Code goes through git (mod
 - [ ] Pranav: queue polling index.json
 - [ ] Pranav: report panel + copilot against any OpenAI-compatible API
 - [ ] Integration: Anant's normal_108 output in Pranav's app
-- [ ] Discord: GX10 handout time, internet, whether Nemotron runs as a service
+- [x] Nemotron runs as a service on the GX10 (Ollama, port 11434); see App section
