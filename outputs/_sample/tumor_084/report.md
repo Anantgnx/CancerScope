@@ -4,4 +4,4 @@
 
 - Category: Micrometastasis
 - Urgency: 7.0/10
-- Tumor regions: 2, largest 1.2991 mm²
+- Tumor regions: 1, largest 1.2991 mm²

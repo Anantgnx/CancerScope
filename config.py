@@ -65,6 +65,10 @@ MODEL_INPUT_SIZE = 224  # UNI2-h input
 FEATURE_DIM = 1536      # UNI2-h output
 TUMOR_THRESHOLD = 0.5
 MIN_REGION_MM2 = 0.2    # tumor_detected rule; record final value in README
+# Hysteresis: a region (connected tiles > TUMOR_THRESHOLD) counts only if it has at least
+# MIN_REGION_TILES tiles and one tile >= REGION_SEED_THRESHOLD. Drops 1-2 tile specks.
+REGION_SEED_THRESHOLD = 0.9
+MIN_REGION_TILES = 2
 
 # --- LLM (OpenAI-compatible local server; confirm on GX10) ---
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:8000/v1")

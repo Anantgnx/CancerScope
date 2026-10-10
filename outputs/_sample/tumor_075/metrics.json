@@ -7,13 +7,13 @@
   "urgency_score": 10.0,
   "category": "Macrometastasis",
   "total_tissue_area_mm2": 32.17,
-  "tumor_area_mm2": 1.4,
-  "tumor_percentage": 4.34,
-  "num_tumor_regions": 5,
+  "tumor_area_mm2": 1.31,
+  "tumor_percentage": 4.09,
+  "num_tumor_regions": 2,
   "largest_region_mm2": 0.7628,
   "largest_region_extent_mm": 2.173,
   "max_confidence": 1.0,
-  "mean_confidence": 0.8506,
+  "mean_confidence": 0.8657,
   "regions": [
     {
       "id": 1,
@@ -43,51 +43,6 @@
         49536,
         32640,
         53760
-      ]
-    },
-    {
-      "id": 3,
-      "area_mm2": 0.0529,
-      "max_confidence": 0.7652,
-      "centroid_px": [
-        60754,
-        11547
-      ],
-      "bbox_px": [
-        59904,
-        11136,
-        61440,
-        11904
-      ]
-    },
-    {
-      "id": 4,
-      "area_mm2": 0.0151,
-      "max_confidence": 0.5718,
-      "centroid_px": [
-        61440,
-        14400
-      ],
-      "bbox_px": [
-        61056,
-        14208,
-        61824,
-        14592
-      ]
-    },
-    {
-      "id": 5,
-      "area_mm2": 0.0151,
-      "max_confidence": 0.6035,
-      "centroid_px": [
-        59904,
-        17856
-      ],
-      "bbox_px": [
-        59520,
-        17664,
-        60288,
-        18048
       ]
     }
   ],

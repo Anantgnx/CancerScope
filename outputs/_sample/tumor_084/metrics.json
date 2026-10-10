@@ -7,13 +7,13 @@
   "urgency_score": 7.0,
   "category": "Micrometastasis",
   "total_tissue_area_mm2": 45.86,
-  "tumor_area_mm2": 1.59,
-  "tumor_percentage": 3.48,
-  "num_tumor_regions": 2,
+  "tumor_area_mm2": 1.3,
+  "tumor_percentage": 2.83,
+  "num_tumor_regions": 1,
   "largest_region_mm2": 1.2991,
   "largest_region_extent_mm": 1.651,
   "max_confidence": 1.0,
-  "mean_confidence": 0.8358,
+  "mean_confidence": 0.8741,
   "regions": [
     {
       "id": 1,
@@ -28,21 +28,6 @@
         49152,
         24576,
         56448
-      ]
-    },
-    {
-      "id": 2,
-      "area_mm2": 0.2946,
-      "max_confidence": 0.8577,
-      "centroid_px": [
-        48014,
-        13257
-      ],
-      "bbox_px": [
-        46848,
-        11136,
-        49536,
-        14976
       ]
     }
   ],

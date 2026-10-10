@@ -16,8 +16,10 @@ CATEGORIES = [
 ]
 
 
-def find_regions(heatmap, downsample, mpp, threshold=config.TUMOR_THRESHOLD):
-    """Threshold, close small gaps, 8-connected components. Coordinates in level-0 px."""
+def find_regions(heatmap, downsample, mpp, threshold=config.TUMOR_THRESHOLD,
+                 seed=config.REGION_SEED_THRESHOLD, min_tiles=config.MIN_REGION_TILES):
+    """Threshold, close small gaps, 8-connected components; keep components with >= min_tiles
+    tiles above threshold and at least one tile >= seed. Coordinates in level-0 px."""
     mask = heatmap > threshold
     closed = ndimage.binary_closing(mask, structure=np.ones((3, 3)))
     labels, n = ndimage.label(closed, structure=np.ones((3, 3)))
@@ -25,9 +27,9 @@ def find_regions(heatmap, downsample, mpp, threshold=config.TUMOR_THRESHOLD):
     regions = []
     for i, sl in enumerate(ndimage.find_objects(labels), start=1):
         region = (labels[sl] == i) & mask[sl]  # only tiles actually above threshold
-        if not region.any():
-            continue
         probs = heatmap[sl][region]
+        if region.sum() < min_tiles or probs.max() < seed:
+            continue
         ys, xs = np.nonzero(region)
         y0, x0 = sl[0].start, sl[1].start
         regions.append({

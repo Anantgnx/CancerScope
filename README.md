@@ -52,10 +52,11 @@ Per slide, `outputs/<slide_id>/`: `heatmap.png`, `heatmap.npy`, `thumbnail.png`,
 
 ## Rules (record final tuned values here)
 - Tumor tile: probability > `0.5` (`config.TUMOR_THRESHOLD`).
-- Regions: threshold → 3x3 closing → 8-connected components; area counts only above-threshold tiles.
+- Regions: threshold → 3x3 closing → 8-connected components; area counts only above-threshold tiles. A region is kept only if it has ≥ 2 tiles and at least one tile ≥ 0.9 (`config.MIN_REGION_TILES`, `config.REGION_SEED_THRESHOLD`). Tuned Oct 10 on cached features: removes 1–2 tile specks (tumor_091: 25 → 5 regions, all 4 annotated tumors kept; normal_108: 3 specks → Negative). Heatmap display is unaffected.
 - `tumor_detected`: any region ≥ `0.2 mm²` with max confidence > 0.5.
 - Urgency: category by the largest region's longest extent (> 2 mm macro, > 0.2 mm micro, else ITC), then within the band by max confidence mapped from (0.5, 1] → [0, 1]. Negative = 0.
 
 ## Evaluation
-- PCam test accuracy / AUC: _TBD_
+- PCam test (32,768 held-out tiles): **accuracy 95.0%, AUC 0.988** (UNI2-h + logistic regression, C=0.0003 chosen on 8,000 valid tiles, trained on 30,000 class-balanced train tiles).
+- tumor_091 vs. pathologist outline (laptop run): Dice 0.82, sensitivity 0.99, precision 0.71, tile AUC 0.99; all 4 annotated tumors found. One extra region (9 tiles, conf 0.99) at the subcapsular sinus, likely a histiocyte mimic.
 - Leakage caveat: PCam tiles come from the same CAMELYON16 slides, so demo heatmaps may look better than true performance. PCam test is the official number.

@@ -16,7 +16,7 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_sco
 
 import config
 
-C_GRID = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]
+C_GRID = [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]
 
 
 def load(tag):
