@@ -123,13 +123,15 @@ def process_slide(slide_id, model=None, classifier=None, device=None, stride=1, 
             feats, cells = torch.from_numpy(d["features"]), torch.from_numpy(d["cells"])
             print(f"  loaded cached features {tuple(feats.shape)}", flush=True)
         else:
-            model = model or load_uni2h(device)
+            if model is None:
+                model = load_uni2h(device)
             feats, cells = embed_tiles(path, level, ds, coords, model, device, batch, workers)
             config.SLIDE_FEATURES_DIR.mkdir(parents=True, exist_ok=True)
             atomic_save(cache, lambda p: np.savez(p, features=feats.numpy(), cells=cells.numpy(),
                                                   level=level, downsample=ds, stride=stride))
 
-        classifier = classifier or load_classifier(device)
+        if classifier is None:
+            classifier = load_classifier(device)
         probs = classifier(feats).numpy() if len(feats) else np.zeros(0, np.float32)
         heat = np.zeros((gh, gw), dtype=np.float32)
         heat[cells[:, 0].numpy(), cells[:, 1].numpy()] = probs

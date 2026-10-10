@@ -36,6 +36,8 @@ Per slide, `outputs/<slide_id>/`: `heatmap.png`, `heatmap.npy`, `thumbnail.png`,
 - `category`: `Macrometastasis` / `Micrometastasis` / `Isolated tumor cells` / `Negative`, for the badge.
 - `largest_region_extent_mm`: longest bbox side of the largest region; drives the category.
 - `heatmap_width`, `heatmap_height`: heatmap grid size in pixels.
+- `outputs/<slide_id>/annotation.json` (tumor slides only, written by `eval.compare_annotations`): pathologist outline as `{"tumor": [[[x, y], ...], ...], "exclusion": [...]}` in level-0 px, for drawing over the slide in the viewer (demo step 4).
+- `outputs/eval/<slide_id>_compare.png`: pathologist outline | our heatmap | overlay, for the evidence slide.
 
 **Heatmap alignment.** The grid is `ceil(slide_w / ds) x ceil(slide_h / ds)`, so it overhangs the right and bottom slide edges by less than one cell. Place the overlay with level-0 width `heatmap_width * heatmap_downsample` (not `slide_width_px`); in OpenSeadragon viewport units that is `heatmap_width * heatmap_downsample / slide_width_px`. `heatmap.npy` is float32 tumor probability, 0 outside tissue.
 
