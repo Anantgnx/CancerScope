@@ -1,12 +1,12 @@
 """All paths and shared constants in one place.
 
-Root comes from HACKDEV_ROOT (defaults to this file's directory), so the same
+Root comes from CANCERSCOPE_ROOT (defaults to this file's directory), so the same
 code runs on the laptop and the GX10 without edits.
 """
 import os
 from pathlib import Path
 
-ROOT = Path(os.environ.get("HACKDEV_ROOT", Path(__file__).resolve().parent))
+ROOT = Path(os.environ.get("CANCERSCOPE_ROOT", Path(__file__).resolve().parent))
 
 # --- models ---
 PRETRAINED_DIR = ROOT / "models" / "pretrained"
@@ -28,8 +28,8 @@ PCAM_FEATURES_DIR = ROOT / "cache" / "pcam_features"
 SLIDE_FEATURES_DIR = ROOT / "cache" / "slide_features"
 
 # --- outputs (the contract with the app) ---
-# HACKDEV_OUTPUTS=outputs/_sample lets the app run on fake data before the pipeline exists
-OUTPUTS_DIR = Path(os.environ.get("HACKDEV_OUTPUTS", ROOT / "outputs"))
+# CANCERSCOPE_OUTPUTS=outputs/_sample lets the app run on fake data before the pipeline exists
+OUTPUTS_DIR = Path(os.environ.get("CANCERSCOPE_OUTPUTS", ROOT / "outputs"))
 if not OUTPUTS_DIR.is_absolute():
     OUTPUTS_DIR = ROOT / OUTPUTS_DIR
 INDEX_PATH = OUTPUTS_DIR / "index.json"
@@ -47,8 +47,8 @@ def slide_path(slide_id: str) -> Path:
 
 # --- device ---
 def get_device() -> str:
-    """cuda on the GX10 / laptop GPU, mps on a Mac, else cpu. Override with HACKDEV_DEVICE."""
-    if dev := os.environ.get("HACKDEV_DEVICE"):
+    """cuda on the GX10 / laptop GPU, mps on a Mac, else cpu. Override with CANCERSCOPE_DEVICE."""
+    if dev := os.environ.get("CANCERSCOPE_DEVICE"):
         return dev
     import torch
     if torch.cuda.is_available():

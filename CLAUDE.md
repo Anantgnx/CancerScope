@@ -1,4 +1,4 @@
-# Hackathon Project Brief: Local Pathology Triage on ASUS GX10
+# CancerScope: Hackathon Project Brief (Local Pathology Triage on ASUS GX10)
 
 This is the shared source of truth. When a decision changes, update this file first. Flag anything that conflicts with the decisions here.
 
@@ -57,7 +57,7 @@ Candidates to add for large tumors: tumor_047, 031, 061, 039, 036, 034, 011, 055
 References: github.com/mahmoodlab/UNI, github.com/mahmoodlab/CLAM.
 
 ## Directory layout
-Anant's pipeline writes `outputs/`; Pranav's app only reads `outputs/` and the `.tif` slides. Viewer tiles served on demand via OpenSlide `DeepZoomGenerator`. Outputs named by real slide ID. All paths come from `config.py` (root from `HACKDEV_ROOT`).
+Anant's pipeline writes `outputs/`; Pranav's app only reads `outputs/` and the `.tif` slides. Viewer tiles served on demand via OpenSlide `DeepZoomGenerator`. Outputs named by real slide ID. All paths come from `config.py` (root from `CANCERSCOPE_ROOT`).
 
 ```
 config.py  setup.sh  requirements.txt  README.md

@@ -3,7 +3,7 @@
 Uses real slide dimensions and puts fake tumor exactly on the pathologist's outline,
 so the viewer overlay can be checked for alignment. Run:
     python -m pipeline.make_sample_outputs
-Then run the app with HACKDEV_OUTPUTS=outputs/_sample.
+Then run the app with CANCERSCOPE_OUTPUTS=outputs/_sample.
 """
 import json
 import math

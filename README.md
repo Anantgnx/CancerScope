@@ -1,10 +1,10 @@
-# Local Pathology Triage on ASUS GX10
+# CancerScope: Local Pathology Triage on ASUS GX10
 
 Triage CAMELYON16 lymph-node slides locally: UNI2-h tile features → PCam-trained classifier → heatmap → urgency-ranked queue → LLM-drafted report. Full brief: [CLAUDE.md](CLAUDE.md).
 
 ## Setup
 ```bash
-git clone <repo> HackDev && cd HackDev
+git clone git@github.com:<you>/CancerScope.git && cd CancerScope
 bash setup.sh                 # venv (.venv), openslide, pip packages
 source .venv/bin/activate
 hf auth login                 # token with access to the gated MahmoodLab models
@@ -25,7 +25,7 @@ python -m pipeline.train_classifier           # Phase A: -> models/trained/tumor
 python -m pipeline.process_slide tumor_091    # Phase B: one slide -> outputs/tumor_091/
 python -m pipeline.run_batch                  # all slides, live index.json updates
 python -m eval.compare_annotations            # accuracy vs. PCam test + CAMELYON16 outlines
-HACKDEV_OUTPUTS=outputs/_sample python -m app.server   # app on sample data
+CANCERSCOPE_OUTPUTS=outputs/_sample python -m app.server   # app on sample data
 ```
 Always run as modules from the repo root (`python -m ...`) so `import config` works.
 
