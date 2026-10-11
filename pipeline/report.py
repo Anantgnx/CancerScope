@@ -106,7 +106,7 @@ BANNED = re.compile(r"additional|other \w+ foci|carcinoma|likelihood|likely|exte
                     re.IGNORECASE)
 
 
-def numbers_ok(text, allowed_text):
+def numbers_ok(text, allowed_text, banned=BANNED):
     """Every number in text (digits or number words) must appear as a value in allowed_text,
     and no banned interpretive phrase may appear. Returns (ok, offending token)."""
     allowed = {float(n.replace(",", "")) for n in NUM.findall(allowed_text)}
@@ -115,7 +115,7 @@ def numbers_ok(text, allowed_text):
     for n in found:
         if not any(abs(float(n) - a) < 1e-9 for a in allowed):
             return False, n
-    if m := BANNED.search(text):
+    if m := banned.search(text):
         return False, m.group(0)
     return True, None
 
