@@ -19,6 +19,11 @@ let current = null;          // metrics.json of the selected slide
 const metricsCache = {};     // slide_id -> metrics.json
 const cards = {};            // slide_id -> queue card element
 
+
+let currentChatHistory = [];
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
   initViewer();
   document.getElementById("heatmap-opacity").addEventListener("input", (e) => {
@@ -159,6 +164,9 @@ async function selectSlide(slideId) {
   if (!tiled) await openSource({ type: "image", url: `/api/slide/${slideId}/thumbnail` });
   if (currentSlideId !== slideId) return;  // user clicked another slide meanwhile
 
+  // Do not auto-open the report or chat when a new slide is selected.
+  // The user must explicitly click the report button to open the modal.
+
   const base = viewer.world.getItemAt(0);
   viewer.scalebar({
     type: OpenSeadragon.ScalebarType.MICROSCOPY,
@@ -275,29 +283,102 @@ function renderCase(m) {
   lucide.createIcons();
 }
 
-// ---------- Report ----------
+// ---------- Report + AI Chat ----------
 
 async function fetchReport() {
   if (!currentSlideId) return;
+
   const panel = document.getElementById("report-panel");
   const content = document.getElementById("report-content");
+  const historyEl = document.getElementById("chat-history");
+
   panel.classList.add("is-open");
-  const htmlUrl = `/api/slide/${currentSlideId}/report.html`;
-  const r = await fetch(htmlUrl, { method: "HEAD" }).catch(() => null);
-  if (r && r.ok) {
-    content.className = "modal-body";
-    content.innerHTML = `<iframe id="report-frame" src="${htmlUrl}"></iframe>`;
-    return;
+  currentChatHistory = [];
+  historyEl.innerHTML = "";
+
+  let reportText = "Drafting report with local Nemotron…";
+
+  try {
+    const resp = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slide_id: currentSlideId }),
+    });
+    const data = await resp.json();
+    reportText = data.report || reportText;
+
+    const htmlUrl = `/api/slide/${currentSlideId}/report.html`;
+    const htmlHead = await fetch(htmlUrl, { method: "HEAD" }).catch(() => null);
+
+    if (htmlHead && htmlHead.ok) {
+      content.className = "modal-body";
+      content.innerHTML = `<iframe id="report-frame" src="${htmlUrl}"></iframe>`;
+    } else {
+      content.className = "modal-body is-text";
+      content.textContent = reportText;
+    }
+  } catch (err) {
+    content.className = "modal-body is-text";
+    content.textContent = "Failed to reach local LLM.";
+    reportText = "Failed to reach local LLM.";
   }
-  content.className = "modal-body is-text";
-  content.textContent = "Drafting report with local Nemotron…";
-  const resp = await fetch("/api/report", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ slide_id: currentSlideId }),
-  });
-  content.textContent = (await resp.json()).report;
+
+  historyEl.innerHTML = "";
+  appendChatBubble("ai", reportText);
+  currentChatHistory.push({ role: "assistant", content: reportText });
 }
 
-function closeReport() { document.getElementById("report-panel").classList.remove("is-open"); }
-function printReport() { document.getElementById("report-frame")?.contentWindow.print(); }
+function closeReport() {
+  document.getElementById("report-panel").classList.remove("is-open");
+}
+
+function printReport() {
+  document.getElementById("report-frame")?.contentWindow.print();
+}
+
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeReport(); });
+
+function handleChatEnter(event) {
+  if (event.key === "Enter") sendChatMessage();
+}
+
+async function sendChatMessage() {
+  const inputEl = document.getElementById("chat-input");
+  const msg = inputEl.value.trim();
+  if (!msg || !currentSlideId) return;
+
+  inputEl.value = "";
+  appendChatBubble("user", msg);
+  currentChatHistory.push({ role: "user", content: msg });
+
+  const loadingId = appendChatBubble("ai", "Thinking...");
+
+  try {
+    const resp = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slide_id: currentSlideId, messages: currentChatHistory }),
+    });
+    const data = await resp.json();
+    const reply = data.reply || "No response from the local model.";
+    document.getElementById(loadingId).innerText = reply;
+    currentChatHistory.push({ role: "assistant", content: reply });
+  } catch (err) {
+    document.getElementById(loadingId).innerText = "Connection error.";
+    currentChatHistory.pop();
+  }
+}
+
+function appendChatBubble(role, text) {
+  const historyEl = document.getElementById("chat-history");
+  const bubble = document.createElement("div");
+  bubble.className = `chat-message ${role === "user" ? "msg-user" : "msg-ai"}`;
+  bubble.innerText = text;
+
+  const id = `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  bubble.id = id;
+
+  historyEl.appendChild(bubble);
+  historyEl.scrollTop = historyEl.scrollHeight;
+  return id;
+}

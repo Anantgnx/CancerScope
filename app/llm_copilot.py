@@ -54,3 +54,59 @@ def generate_pathology_report(metrics: dict) -> str:
             f"- **Confidence Assessment**: Peak probability {metrics.get('max_confidence')} (mean {metrics.get('mean_confidence')}).\n"
             f"- **Recommendation**: Prioritize for immediate manual histological confirmation by attending pathologist."
         )
+
+
+
+
+def chat_with_copilot(metrics: dict, chat_history: list) -> str:
+    """Handles multi-turn conversation with the local LLM."""
+
+    if not chat_history:
+        return "I have the slide metrics loaded. Ask me about the tumor burden, largest focus, or margin assessment."
+
+    # Prepend the structured metrics as the system context
+    system_prompt = format_prompt(metrics)
+    messages = [{"role": "system", "content": system_prompt}] + chat_history
+
+    try:
+        import urllib.request
+        payload = json.dumps({
+            "model": "nemotron",
+            "messages": messages,
+            "temperature": 0.2
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            "http://localhost:8000/v1/chat/completions",
+            data=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+            return data["choices"][0]["message"]["content"]
+
+    except Exception:
+        last_msg = chat_history[-1]["content"].lower()
+        tumor_area = float(metrics.get("tumor_area_mm2") or 0.0)
+        largest_region_area = float(metrics.get("largest_region_mm2") or 0.0)
+        largest_extent = float(metrics.get("largest_region_extent_mm") or 0.0)
+        region_count = int(metrics.get("num_tumor_regions") or 0)
+
+        if "margin" in last_msg or "clear" in last_msg:
+            return (
+                f"Based on the extracted metrics, the slide contains {tumor_area:.2f} mm² of suspicious tumor area. "
+                f"The current summary does not include a direct pixel-level boundary measurement, so margin clarity is best interpreted as a review flag rather than a confirmed diagnostic statement."
+            )
+        if "compare" in last_msg or "largest" in last_msg:
+            if largest_region_area > 0:
+                secondary = max(region_count - 1, 0)
+                return (
+                    f"The largest region spans {largest_region_area:.2f} mm² with an extent of {largest_extent:.2f} mm, "
+                    f"which is the dominant focus relative to the other {secondary} region(s) in the summary."
+                )
+            return (
+                f"The current summary shows {region_count} suspicious region(s) and a total tumor area of {tumor_area:.2f} mm². "
+                f"The largest focus is not separated into a distinct area metric in this snapshot, but the overall burden is concentrated in the dominant region."
+            )
+
+        return f"[Simulated Nemotron Response]\nContext received. Answering: '{chat_history[-1]['content']}'"

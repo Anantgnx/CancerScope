@@ -365,3 +365,103 @@ button { font: inherit; color: inherit; }
 
 /* OpenSeadragon scalebar sits above our legend */
 .scalebar-pos { z-index: 4; }
+
+
+.report-chat-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  flex: 1;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.report-pane {
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+
+.copilot-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #111821;
+}
+
+.report-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.report-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #c9d1d9;
+}
+
+.chat-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px;
+  gap: 8px;
+}
+
+.chat-history {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-message {
+  max-width: 92%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.msg-user {
+  background: #1f6feb;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 0;
+  margin-left: 12px;
+}
+
+.msg-ai {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: var(--text);
+  align-self: flex-start;
+  border-bottom-left-radius: 0;
+  margin-right: 12px;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #0d1117;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.chat-input:focus {
+  border-color: #388bfd;
+}

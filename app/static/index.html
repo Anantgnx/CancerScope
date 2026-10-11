@@ -129,7 +129,23 @@
           <button class="icon-btn" onclick="closeReport()" title="Close"><i data-lucide="x"></i></button>
         </div>
       </div>
-      <div id="report-content" class="modal-body"></div>
+      <div class="report-chat-layout">
+        <div class="report-pane">
+          <div id="report-content" class="modal-body"></div>
+        </div>
+        <div class="copilot-pane">
+          <div class="report-header">
+            <h3>AI Pathology Copilot</h3>
+          </div>
+          <div class="chat-container">
+            <div id="chat-history" class="chat-history"></div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-input" class="chat-input" placeholder="Ask about this slide..." onkeypress="handleChatEnter(event)">
+              <button class="btn-primary" onclick="sendChatMessage()">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

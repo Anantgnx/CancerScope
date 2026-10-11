@@ -159,6 +159,33 @@ def generate_or_fetch_report(req: ReportRequest):
         return {"report": f"LLM Generation Error: {str(e)}", "cached": False}
 
 
+
+
+class ChatRequest(BaseModel):
+    slide_id: str
+    messages: list[dict]  # Expects [{"role": "user", "content": "..."}]
+
+# Add this endpoint
+@app.post("/api/chat")
+def chat_with_model(req: ChatRequest):
+    try:
+        from llm_copilot import chat_with_copilot
+        metrics_path = DATA_DIR / req.slide_id / "metrics.json"
+        
+        with open(metrics_path, "r") as f:
+            metrics_data = json.load(f)
+            
+        # Pass the metrics and the conversation history to the LLM
+        response_text = chat_with_copilot(metrics_data, req.messages)
+        return {"reply": response_text}
+    except Exception as e:
+        return {"reply": f"LLM Integration Error: {str(e)}"}
+
+
+
+    
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
