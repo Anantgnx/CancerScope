@@ -8,11 +8,13 @@ from scipy import ndimage
 
 import config
 
-# (category, min longest extent in mm, urgency band). Checked in order.
+# (category, min longest extent in mm, extent mapped to the top of the band, urgency band). Checked in order.
+# Within a band, urgency rises with the largest focus (log scale), so a 3.9 mm macrometastasis
+# outranks a 2.3 mm one; confidence only trims the score (the model is ~0.99 on most real tumor).
 CATEGORIES = [
-    ("Macrometastasis", 2.0, (7.0, 10.0)),
-    ("Micrometastasis", 0.2, (4.0, 7.0)),
-    ("Isolated tumor cells", 0.0, (1.0, 4.0)),
+    ("Macrometastasis", 2.0, 5.0, (7.0, 10.0)),
+    ("Micrometastasis", 0.2, 2.0, (4.0, 7.0)),
+    ("Isolated tumor cells", 0.0, 0.2, (1.0, 4.0)),
 ]
 
 
@@ -54,18 +56,19 @@ def extent_mm(region, mpp):
 
 
 def urgency(regions, mpp):
-    """Category from the largest region's longest extent (clinical size rule), score scaled
-    within the band by max confidence mapped from (threshold, 1] to [0, 1]."""
+    """Category from the largest region's longest extent (clinical size rule). Score within the band
+    scales with that extent (log between the band's size limits), times 0.8-1.0 for confidence."""
     if not regions:
         return "Negative", 0.0
-    largest = max(regions, key=lambda r: extent_mm(r, mpp))
-    ext = extent_mm(largest, mpp)
+    ext = max(extent_mm(r, mpp) for r in regions)
     conf = max(r["max_confidence"] for r in regions)
     t = np.clip((conf - config.TUMOR_THRESHOLD) / (1 - config.TUMOR_THRESHOLD), 0, 1)
-    for name, min_mm, (lo, hi) in CATEGORIES:
-        if ext > min_mm:
+    for name, lo_mm, hi_mm, (lo, hi) in CATEGORIES:
+        if ext > lo_mm:
             break
-    return name, round(float(lo + (hi - lo) * t), 2)
+    size = ext / hi_mm if lo_mm == 0 else np.log(ext / lo_mm) / np.log(hi_mm / lo_mm)
+    pos = float(np.clip(size, 0, 1)) * (0.8 + 0.2 * t)
+    return name, round(float(lo + (hi - lo) * pos), 2)
 
 
 def build_metrics(slide_id, filename, heatmap, downsample, slide_w, slide_h, mpp,

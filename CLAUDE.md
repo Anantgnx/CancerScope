@@ -97,7 +97,7 @@ UNI2-h is frozen; classifier trained on PCam features; Nemotron only reads numbe
 
 **Phase B (process_slide.py):** open .tif, read dims/mpp/levels → tissue mask from thumbnail (`total_tissue_area_mm2`) → tile at level 2, 96x96, tissue only (**matching PCam magnification is the most important correctness detail**) → bf16 batches UNI2-h + classifier, cache features in `cache/slide_features/` → heatmap.npy / heatmap.png (transparent→red) / thumbnail.png → regions: threshold >0.5, smooth, connected components, area mm² = count × (384·mpp)² / 10⁶ → urgency → metrics.json + index.json. `run_batch.py` marks all queued, processes one by one, updating status.
 
-**Urgency rule** (largest region, scaled by confidence within band):
+**Urgency rule** (largest region; within the band the score rises with the largest focus size on a log scale, confidence trims it; changed Oct 10, see README):
 | Largest region | Category | Urgency |
 |---|---|---|
 | > 2 mm | Macrometastasis | 7–10 |

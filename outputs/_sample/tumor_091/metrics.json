@@ -4,7 +4,7 @@
   "filename": "tumor_091.tif",
   "status": "done",
   "tumor_detected": true,
-  "urgency_score": 7.0,
+  "urgency_score": 6.35,
   "category": "Micrometastasis",
   "total_tissue_area_mm2": 36.78,
   "tumor_area_mm2": 2.36,

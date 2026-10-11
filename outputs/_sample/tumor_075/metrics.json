@@ -4,7 +4,7 @@
   "filename": "tumor_075.tif",
   "status": "done",
   "tumor_detected": true,
-  "urgency_score": 10.0,
+  "urgency_score": 7.27,
   "category": "Macrometastasis",
   "total_tissue_area_mm2": 32.17,
   "tumor_area_mm2": 1.31,

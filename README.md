@@ -56,7 +56,7 @@ Per slide, `outputs/<slide_id>/`: `heatmap.png`, `heatmap.npy`, `thumbnail.png`,
 - Tumor tile: probability > `0.5` (`config.TUMOR_THRESHOLD`).
 - Regions: threshold → 3x3 closing → 8-connected components; area counts only above-threshold tiles. A region is kept only if it has ≥ 2 tiles and at least one tile ≥ 0.9 (`config.MIN_REGION_TILES`, `config.REGION_SEED_THRESHOLD`). Tuned Oct 10 on cached features: removes 1–2 tile specks (tumor_091: 25 → 5 regions, all 4 annotated tumors kept; normal_108: 3 specks → Negative). Heatmap display is unaffected.
 - `tumor_detected`: any reported region with longest extent > 0.2 mm (micrometastasis or larger), the same size rule as the categories. Changed Oct 10 from the brief's "area ≥ 0.2 mm²", which marked tumor_081 (0.35 mm micromet, 0.07 mm²) as not detected while categorizing it as a micrometastasis.
-- Urgency: category by the largest region's longest extent (> 2 mm macro, > 0.2 mm micro, else ITC), then within the band by max confidence mapped from (0.5, 1] → [0, 1]. Negative = 0.
+- Urgency: category by the largest region's longest extent (> 2 mm macro, > 0.2 mm micro, else ITC). Within the band, the score rises with that extent on a log scale (macro 2→5 mm maps 7→10, micro 0.2→2 mm maps 4→7, ITC 0→0.2 mm maps 1→4), times 0.8–1.0 for confidence. Negative = 0. Changed Oct 10 from "scaled by confidence": the model is ~0.99 confident on nearly every real tumor, so every macro scored ~10 and every micro ~7. Re-apply rules to existing outputs with `python -m pipeline.rescore` (keeps processing times).
 
 ## Evaluation
 - PCam test (32,768 held-out tiles): **accuracy 95.0%, AUC 0.988** (UNI2-h + logistic regression, C=0.0003 chosen on 8,000 valid tiles, trained on 30,000 class-balanced train tiles).
@@ -64,13 +64,13 @@ Per slide, `outputs/<slide_id>/`: `heatmap.png`, `heatmap.npy`, `thumbnail.png`,
 
 | Slide | Category | Urgency | Dice | Sensitivity | Precision | Tile AUC |
 |---|---|---|---|---|---|---|
-| tumor_075 | Macrometastasis | 10.00 | 0.67 | 0.97 | 0.51 | 0.98 |
-| tumor_082 | Macrometastasis | 9.98 | 0.86 | 0.86 | 0.86 | 0.89 |
-| tumor_084 | Macrometastasis | 9.98 | 0.64 | 0.98 | 0.48 | 0.99 |
-| tumor_091 | Micrometastasis | 7.00 | 0.82 | 0.99 | 0.71 | 0.99 |
-| tumor_107 | Micrometastasis | 6.99 | 0.47 | 1.00 | 0.31 | 1.00 |
-| tumor_081 | Micrometastasis | 6.95 | 0.25 | 1.00 | 0.14 | 1.00 |
-| normal_019, 042, 108, 150 | Negative | 0.00 | – | – | – | – |
+| tumor_075 | Macrometastasis | 7.40 | 0.67 | 0.97 | 0.51 | 0.98 |
+| tumor_082 | Macrometastasis | 9.19 | 0.86 | 0.86 | 0.86 | 0.89 |
+| tumor_084 | Macrometastasis | 7.76 | 0.64 | 0.98 | 0.48 | 0.99 |
+| tumor_091 | Micrometastasis | 6.61 | 0.82 | 0.99 | 0.71 | 0.99 |
+| tumor_107 | Micrometastasis | 6.04 | 0.47 | 1.00 | 0.31 | 1.00 |
+| tumor_081 | Micrometastasis | 4.72 | 0.25 | 1.00 | 0.14 | 1.00 |
+| normal_108, 109, 123, 150 | Negative | 0.00 | – | – | – | – |
 
   Low precision on tumor_081 / tumor_107 is an edge effect on tiny lesions (4 and 29 annotated tiles): the single reported region sits exactly on the pathologist's outline, but a few boundary tiles dominate the ratio. tumor_091 has one extra region at the subcapsular sinus (likely a histiocyte mimic).
 - Leakage caveat: PCam tiles come from the same CAMELYON16 slides, so demo heatmaps may look better than true performance. PCam test is the official number.
