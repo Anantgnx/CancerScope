@@ -239,7 +239,8 @@ def get_live():
     p = DATA_DIR / "live.json"
     state = json.loads(p.read_text()) if p.exists() else {"run": "idle"}
     ff_active = "_ff_thread" in globals() and _ff_thread is not None and _ff_thread.is_alive()
-    if state.get("run") == "running" and not _running() and _demo_proc is not None and not ff_active:
+    stale = _time.time() - state.get("updated_at", 0) > 30   # e.g. the server restarted mid-run
+    if state.get("run") == "running" and not _running() and not ff_active and (_demo_proc is not None or stale):
         state["run"] = "stopped"
     state["holdout"] = DEMO_HOLDOUT
     state["holdout_available"] = config.slide_path(DEMO_HOLDOUT).exists()
