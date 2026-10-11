@@ -14,14 +14,11 @@ function initViewer() {
     showNavigationControl: true,
     animationTime: 0.5,
     blendTime: 0.1,
-    // Increase this from 2 to 10 or higher to allow massive zoom on flat images
     maxZoomPixelRatio: 15, 
-    // Ensures zooming out always snaps to fit the screen
     minZoomImageRatio: 0.9 
   });
 }
 
-// Inside app/static/viewer.js -> loadQueue()
 async function loadQueue() {
   const resp = await fetch("/api/queue");
   const data = await resp.json();
@@ -30,7 +27,6 @@ async function loadQueue() {
 
   let totalGB = 0;
   data.slides.forEach((slide, idx) => {
-    // FIX: Parse as float to ensure math works, fallback to 0
     totalGB += parseFloat(slide.gb_processed) || 0;
     
     const item = document.createElement("div");
@@ -48,7 +44,6 @@ async function loadQueue() {
     queueEl.appendChild(item);
   });
 
-  // FIX: Force update the DOM with the summed value
   document.getElementById("gb-counter").innerText = totalGB.toFixed(1);
 
   if (data.slides.length > 0) {
@@ -63,12 +58,10 @@ async function selectSlide(slideId, element) {
     element.classList.add("active");
   }
 
-  // Reset the button UI back to ON for the new slide
   const btn = document.getElementById("heatmap-toggle-btn");
   if (btn) {
     btn.innerText = "🗺️ AI Heatmap: ON";
-    btn.style.background = "#1f6feb";
-    btn.style.border = "1px solid #388bfd";
+    btn.classList.remove("off");
   }
 
   viewer.open({
@@ -89,24 +82,19 @@ async function selectSlide(slideId, element) {
   });
 }
 
-// 3. Add the toggle function
 function toggleHeatmap() {
   if (heatmapLayer) {
     const currentOpacity = heatmapLayer.getOpacity();
     const btn = document.getElementById("heatmap-toggle-btn");
     
     if (currentOpacity > 0) {
-      // Turn OFF
       heatmapLayer.setOpacity(0);
       btn.innerText = "🗺️ AI Heatmap: OFF";
-      btn.style.background = "#21262d"; // Dark background to look inactive
-      btn.style.border = "1px solid #30363d";
+      btn.classList.add("off");
     } else {
-      // Turn ON
       heatmapLayer.setOpacity(0.65);
       btn.innerText = "🗺️ AI Heatmap: ON";
-      btn.style.background = "#1f6feb"; // Blue background to look active
-      btn.style.border = "1px solid #388bfd";
+      btn.classList.remove("off");
     }
   }
 }

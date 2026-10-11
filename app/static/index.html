@@ -3,39 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <title>Local Pathology Triage — ASUS GX10</title>
+  <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
-  <style>
-    :root { --bg: #0d1117; --panel: #161b22; --accent: #f85149; --text: #c9d1d9; --border: #30363d; }
-    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-    #sidebar { width: 340px; border-right: 1px solid var(--border); background: var(--panel); display: flex; flex-direction: column; }
-    #header { padding: 16px; border-bottom: 1px solid var(--border); }
-    #counter-badge { background: #238636; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; display: inline-block; }
-    #queue { flex: 1; overflow-y: auto; padding: 8px; }
-    .slide-item { padding: 12px; margin-bottom: 8px; background: #21262d; border-radius: 6px; cursor: pointer; border-left: 4px solid transparent; }
-    .slide-item:hover { background: #30363d; }
-    .slide-item.active { border-left-color: var(--accent); background: #30363d; }
-    .urgent { color: var(--accent); font-weight: bold; }
-    #main { flex: 1; display: flex; flex-direction: column; position: relative; }
-    #viewer { flex: 1; width: 100%; height: 100%; background: #000; }
-    #report-panel { position: absolute; right: 16px; top: 16px; width: 360px; max-height: 80vh; background: rgba(22, 27, 34, 0.95); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-y: auto; backdrop-filter: blur(8px); display: none; }
-    button { background: #238636; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-  </style>
 </head>
 <body>
   <div id="sidebar">
     <div id="header">
-      <h2 style="margin:0 0 4px 0; font-size: 1.2rem;">Pathology Triage</h2>
-      
-      <!-- Streamlined GB Badge -->
+      <h2>Pathology Triage</h2>
       <div id="counter-badge">⚡ <span id="gb-counter">0</span> GB Analyzed</div>
+      <div class="local-pitch-text">Local processing: 0 bytes uploaded to cloud</div>
       
-      <!-- Core pitch requirement restyled for better UI -->
-      <div style="font-size: 0.75rem; color: #8b949e; margin-top: 6px;">
-        Local processing: 0 bytes uploaded to cloud
-      </div>
-      
-      <!-- Toggle button moved to sidebar -->
-      <button id="heatmap-toggle-btn" onclick="toggleHeatmap()" style="margin-top: 16px; width: 100%; background: #1f6feb; color: white; border: 1px solid #388bfd; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">
+      <button id="heatmap-toggle-btn" class="btn-heatmap" onclick="toggleHeatmap()">
         🗺️ AI Heatmap: ON
       </button>
     </div>
@@ -46,15 +24,15 @@
     <div id="viewer"></div>
     
     <div id="report-panel">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-        <h3 style="margin:0;">Clinical Report</h3>
-        <button onclick="document.getElementById('report-panel').style.display='none'">✕</button>
+      <div class="report-header">
+        <h3>Clinical Report</h3>
+        <button class="btn-close" onclick="document.getElementById('report-panel').style.display='none'">✕</button>
       </div>
-      <div id="report-content" style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.4;">Loading...</div>
+      <div id="report-content">Loading...</div>
     </div>
     
-    <div style="position: absolute; bottom: 20px; left: 20px; z-index: 10;">
-      <button onclick="fetchReport()">📋 One-Click Report</button>
+    <div class="report-trigger">
+      <button class="btn-primary" onclick="fetchReport()">📋 One-Click Report</button>
     </div>
   </div>
 
