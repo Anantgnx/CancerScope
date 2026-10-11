@@ -1,5 +1,7 @@
 # Frontend contract (Anant: index.html + style.css · Pranav: *.js + server.py)
 
+Design rules (redesign 2): black canvas + hairlines, color only for meaning (red STAT, amber urgent, green negative/OK, teal = system/interactive), big type + small tracked uppercase labels, monospace for data, always show state, visible controls with hints.
+
 Rule: JS never sets inline styles for looks (only data-driven values like a bar width). It emits the
 classes below; style.css owns every color, size and layout. index.html owns structure; JS only fills
 the placeholders listed here. New feature → ask for a placeholder `<div id="...">`, don't edit index.html.
@@ -9,6 +11,8 @@ the placeholders listed here. New feature → ask for a placeholder `<div id="..
 |---|---|
 | `#queue` | `.queue-card` elements, keyed by `data-id`, reordered with `appendChild` (AutoAnimate animates moves) |
 | `#queue-count`, `#stat-slides`, `#gb-counter`, `#stat-urgent` | text |
+| `#stat-pipeline` | `<i class="state-dot is-idle|is-running|is-ok"></i>` + Idle / Running / Complete |
+| `#modal-slide` | slide id shown in the report modal title |
 | `#viewer` | OpenSeadragon |
 | `#case-id`, `#case-meta` | text |
 | `#case-priority` | priority banner children (below) + class `priority-banner prio-*` |
@@ -31,14 +35,14 @@ Buttons in index.html call: `toggleHeatmap()`, `toggleOutline()`, `resetView()`,
   <img class="queue-thumb">
   <div class="queue-id">tumor_082</div>
   <div class="queue-score">9.2</div>              <!-- or <small>queued</small> -->
-  <div class="queue-detail"><span class="chip">Macrometastasis</span><span class="measure">3.91 mm · 6 foci</span></div>
-  <div class="queue-bar"><span style="width: 92%"></span></div>
+  <div class="queue-detail"><span class="chip">Macromet</span><span class="measure">3.91 mm · 6 foci</span></div>
+  <div class="queue-bar"><span style="width: 92%"></span></div>   <!-- hidden in redesign 2 -->
 </div>
 ```
 **Priority banner** (inside `#case-priority`): `.priority-level`, `.priority-category`, `.priority-note`, `.priority-score` (+ `<small>`)
 **Metric:** `.metric > .metric-label + .metric-value (+ <small>unit</small>)`
 **Focus row:** `.focus-row > .focus-num + div(.focus-size, .focus-sub) + .focus-conf + <i data-lucide="chevron-right">`
-**Generic:** `.chip`, `.dot`
+**Generic:** `.chip`, `.dot`, `.label` (small tracked uppercase), `.mono` (data), `.state-dot.is-idle|is-running|is-ok`, buttons `.btn` / `.btn.btn-accent`, `.tool-btn(.is-on)`
 
 **Copilot chat** (inside `#report-panel`): `#chat-history` holds `#chat-empty` (toggle `.is-hidden`; never delete it) and
 `.chat-message.msg-user` / `.chat-message.msg-ai` bubbles (add `.is-typing` to an AI bubble while waiting).

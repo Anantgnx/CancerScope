@@ -7,6 +7,7 @@ const PRIORITY = {
   "Negative":             { cls: "prio-routine",  level: "ROUTINE",  note: "Routine queue" },
 };
 const OUTLINE_COLOR = "#2ee6a8";
+const SHORT = { "Macrometastasis": "Macromet", "Micrometastasis": "Micromet", "Isolated tumor cells": "ITC", "Negative": "Negative" };
 
 let viewer = null;
 let currentSlideId = null;
@@ -121,7 +122,7 @@ function updateCard(el, s, m) {
 
   el.querySelector(".queue-score").innerHTML = done
     ? s.urgency_score.toFixed(1) : `<small>${s.status}</small>`;
-  el.querySelector(".chip").textContent = done ? s.category : (s.status === "processing" ? "Analyzing…" : "Queued");
+  el.querySelector(".chip").textContent = done ? (SHORT[s.category] || s.category) : (s.status === "processing" ? "Analyzing…" : "Queued");
   el.querySelector(".measure").textContent = done && m
     ? (m.num_tumor_regions ? `${m.largest_region_extent_mm.toFixed(2)} mm · ${m.num_tumor_regions} ${m.num_tumor_regions === 1 ? "focus" : "foci"}` : "No suspicious foci")
     : "";
@@ -135,6 +136,9 @@ function updateStats(slides) {
   document.getElementById("stat-urgent").textContent =
     done.filter(s => ["Macrometastasis", "Micrometastasis"].includes(s.category)).length;
   document.getElementById("queue-count").textContent = slides.length;
+  const running = slides.some(s => s.status === "processing" || s.status === "queued");
+  const state = running ? ["is-running", "Running"] : done.length ? ["is-ok", "Complete"] : ["is-idle", "Idle"];
+  document.getElementById("stat-pipeline").innerHTML = `<i class="state-dot ${state[0]}"></i>${state[1]}`;
 }
 
 // ---------- Viewer ----------
@@ -269,9 +273,9 @@ function renderCase(m) {
     const row = document.createElement("div");
     row.className = "focus-row";
     row.innerHTML = `
-      <span class="focus-num">${i + 1}</span>
+      <span class="focus-num">${String(i + 1).padStart(2, "0")}</span>
       <div><div class="focus-size">${ext.toFixed(2)} mm</div><div class="focus-sub">${r.area_mm2.toFixed(2)} mm² area</div></div>
-      <span class="focus-conf">p ${r.max_confidence.toFixed(2)}</span>
+      <span class="focus-conf">p&nbsp;${r.max_confidence.toFixed(2)}</span>
       <i data-lucide="chevron-right"></i>`;
     row.onclick = () => zoomToFocus(r);
     foci.appendChild(row);
@@ -281,6 +285,7 @@ function renderCase(m) {
     `Processed on-device in <b>${Math.round(m.processing_time_sec)} s</b> · <b>${m.gb_processed.toFixed(2)} GB</b> read, 0 bytes uploaded<br>` +
     `Model: UNI2-h features + linear classifier`;
   lucide.createIcons();
+  if (window.gsap) gsap.from("#case-panel > *", { opacity: 0, y: 6, duration: 0.35, stagger: 0.035, ease: "power2.out" });
 }
 
 // ---------- Report + AI Chat ----------
@@ -293,6 +298,7 @@ async function fetchReport() {
   const historyEl = document.getElementById("chat-history");
 
   panel.classList.add("is-open");
+  document.getElementById("modal-slide").textContent = currentSlideId;
   resetChat();
 
   let reportText = "Drafting report with local Nemotron…";
@@ -353,7 +359,7 @@ function handleChatEnter(event) {
 async function sendChatMessage() {
   const inputEl = document.getElementById("chat-input");
   const msg = inputEl.value.trim();
-  if (!msg || !currentSlideId) return;
+  if (!msg || !currentSlideId || document.querySelector(".send-btn").disabled) return;  // one question at a time
 
   inputEl.value = "";
   document.getElementById("chat-empty").classList.add("is-hidden");

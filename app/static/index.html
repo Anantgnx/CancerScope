@@ -10,27 +10,26 @@
   <script src="/static/vendor/osd-plugins/openseadragon-scalebar.js"></script>
   <script src="/static/vendor/osd-plugins/openseadragon-svg-overlay.js"></script>
   <script src="/static/vendor/lucide/lucide.min.js"></script>
+  <script src="/static/vendor/gsap/gsap.min.js"></script>
 </head>
 <body>
-  <!-- ===== Top bar ===== -->
+  <!-- ===== Top bar: wordmark · system status strip · device ===== -->
   <header id="topbar">
     <div class="brand">
       <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-        <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.2"/>
-        <circle cx="16" cy="16" r="5.5" fill="currentColor"/>
-        <path d="M16 3v4M16 25v4M3 16h4M25 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="16" cy="16" r="12.5" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="16" cy="16" r="4.5" fill="currentColor"/>
       </svg>
-      <div>
-        <div class="brand-name">CancerScope</div>
-        <div class="brand-sub">Lymph node metastasis triage</div>
-      </div>
+      <span class="wordmark">CancerScope</span>
     </div>
 
-    <div class="stats">
-      <div class="stat"><span class="stat-label">Slides triaged</span><span class="stat-value" id="stat-slides">–</span></div>
-      <div class="stat"><span class="stat-label">Data analyzed</span><span class="stat-value"><span id="gb-counter">0</span> GB</span></div>
-      <div class="stat"><span class="stat-label">Urgent cases</span><span class="stat-value" id="stat-urgent">–</span></div>
-      <div class="stat stat-zero"><span class="stat-label">Uploaded to cloud</span><span class="stat-value">0 bytes</span></div>
+    <div class="status-strip">
+      <div class="cell"><span class="label">Pipeline</span><span class="value" id="stat-pipeline"><i class="state-dot is-idle"></i>Idle</span></div>
+      <div class="cell"><span class="label">Slides triaged</span><span class="value mono" id="stat-slides">–</span></div>
+      <div class="cell"><span class="label">Urgent</span><span class="value mono" id="stat-urgent">–</span></div>
+      <div class="cell"><span class="label">Data analyzed</span><span class="value mono"><span id="gb-counter">0</span> GB</span></div>
+      <div class="cell"><span class="label">Uploaded</span><span class="value mono is-ok">0 B</span></div>
+      <div class="cell"><span class="label">Models</span><span class="value">UNI2-h · Nemotron</span></div>
     </div>
 
     <div class="device-pill" id="device-pill">
@@ -43,18 +42,16 @@
     <!-- ===== Left: triage queue ===== -->
     <aside id="sidebar">
       <div class="panel-head">
-        <div>
-          <h2>Triage queue</h2>
-          <p class="panel-sub">Most urgent first</p>
-        </div>
-        <span class="count-chip" id="queue-count">0</span>
+        <span class="label">Triage queue</span>
+        <span class="label mono" id="queue-count">0</span>
       </div>
+      <div class="panel-note">Sorted by urgency, most urgent first</div>
       <div id="queue"></div>
       <div class="legend-priority">
-        <span><i class="dot prio-stat"></i>STAT</span>
-        <span><i class="dot prio-urgent"></i>Urgent</span>
-        <span><i class="dot prio-priority"></i>Priority</span>
-        <span><i class="dot prio-routine"></i>Routine</span>
+        <span class="prio-stat"><i class="dot"></i>STAT</span>
+        <span class="prio-urgent"><i class="dot"></i>Urgent</span>
+        <span class="prio-priority"><i class="dot"></i>Priority</span>
+        <span class="prio-routine"><i class="dot"></i>Routine</span>
       </div>
     </aside>
 
@@ -64,10 +61,10 @@
 
       <div class="viewer-toolbar" id="viewer-toolbar">
         <button id="heatmap-toggle-btn" class="tool-btn is-on" onclick="toggleHeatmap()" title="Show or hide the AI heatmap">
-          <i data-lucide="flame"></i><span>AI heatmap</span>
+          <i data-lucide="flame"></i><span>Heatmap</span>
         </button>
         <label class="tool-slider" title="Heatmap opacity">
-          <i data-lucide="droplet"></i>
+          <span>Opacity</span>
           <input type="range" id="heatmap-opacity" min="0" max="100" value="65">
         </label>
         <button id="outline-toggle-btn" class="tool-btn" onclick="toggleOutline()" title="Pathologist annotation (CAMELYON16 ground truth)">
@@ -78,10 +75,12 @@
         </button>
       </div>
 
+      <div class="viewer-hint">Scroll to zoom · drag to pan · click a focus to fly to it</div>
+
       <div class="viewer-legend" id="viewer-legend">
-        <span>Tumor probability</span>
+        <span class="label">Tumor probability</span>
         <div class="legend-bar"></div>
-        <div class="legend-ticks"><span>0.2</span><span>0.6</span><span>1.0</span></div>
+        <div class="legend-ticks mono"><span>0.2</span><span>0.6</span><span>1.0</span></div>
       </div>
 
       <div class="viewer-empty" id="viewer-empty">
@@ -93,40 +92,41 @@
     <!-- ===== Right: case panel ===== -->
     <aside id="case-panel">
       <div id="case-header" class="case-header">
+        <span class="label">Case</span>
         <div class="case-id" id="case-id">No slide selected</div>
-        <div class="case-meta" id="case-meta"></div>
+        <div class="case-meta mono" id="case-meta"></div>
       </div>
 
       <div id="case-priority" class="priority-banner"></div>
 
       <section class="case-section">
-        <h3>Measurements</h3>
+        <div class="section-head"><span class="label">Measurements</span></div>
         <div id="case-metrics" class="metric-grid"></div>
       </section>
 
       <section class="case-section case-foci">
-        <h3>Suspicious foci <span class="section-hint">click to zoom</span></h3>
+        <div class="section-head"><span class="label">Suspicious foci</span><span class="hint">Click to fly to a focus</span></div>
         <div id="case-foci" class="foci-list"></div>
       </section>
 
       <div class="case-actions">
-        <button class="btn-primary" onclick="fetchReport()">
-          <i data-lucide="file-text"></i><span>Open triage report</span>
+        <button class="btn btn-accent" onclick="fetchReport()">
+          <i data-lucide="file-text"></i><span>Open report &amp; ask Nemotron</span>
         </button>
       </div>
 
-      <footer class="case-footer" id="case-footer"></footer>
+      <footer class="case-footer mono" id="case-footer"></footer>
     </aside>
   </div>
 
-  <!-- ===== Report modal ===== -->
+  <!-- ===== Report + copilot modal ===== -->
   <div id="report-panel" class="modal" onclick="if (event.target === this) closeReport()">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title"><i data-lucide="file-text"></i><span>Triage report</span></div>
+        <div class="modal-title"><span class="label">Triage report</span><span class="mono" id="modal-slide"></span></div>
         <div class="modal-actions">
           <button class="icon-btn" onclick="printReport()" title="Print"><i data-lucide="printer"></i></button>
-          <button class="icon-btn" onclick="closeReport()" title="Close"><i data-lucide="x"></i></button>
+          <button class="icon-btn" onclick="closeReport()" title="Close (Esc)"><i data-lucide="x"></i></button>
         </div>
       </div>
       <div class="report-chat-layout">
@@ -135,31 +135,28 @@
         </div>
         <div class="copilot-pane">
           <div class="copilot-head">
-            <div class="copilot-title">
-              <span class="copilot-avatar"><i data-lucide="sparkles"></i></span>
-              <div>
-                <div class="copilot-name">Ask CancerScope</div>
-                <div class="copilot-sub">Nemotron · running locally on the GX10</div>
-              </div>
+            <div>
+              <div class="copilot-name">Ask CancerScope</div>
+              <div class="copilot-sub mono">nemotron3:33b · local</div>
             </div>
-            <span class="local-badge"><i data-lucide="shield-check"></i>On-device</span>
+            <span class="local-badge"><i class="state-dot is-ok"></i>On-device</span>
           </div>
 
           <div id="chat-history" class="chat-history">
             <div id="chat-empty" class="chat-empty">
-              <p class="chat-empty-title">Ask about this slide</p>
-              <p class="chat-empty-sub">Answers use only this slide's measurements.</p>
+              <span class="label">Suggested questions</span>
               <div class="suggestions">
                 <button class="suggestion-chip" onclick="askSuggestion(this)">Why is this case prioritized?</button>
                 <button class="suggestion-chip" onclick="askSuggestion(this)">Where should I look first?</button>
                 <button class="suggestion-chip" onclick="askSuggestion(this)">How large is the largest focus?</button>
                 <button class="suggestion-chip" onclick="askSuggestion(this)">How much of the tissue is involved?</button>
               </div>
+              <p class="chat-empty-sub">Answers come only from this slide's measurements, and every number is checked.</p>
             </div>
           </div>
 
           <div class="composer">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Ask a question about this slide…" onkeypress="handleChatEnter(event)" autocomplete="off">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask about this slide…" onkeypress="handleChatEnter(event)" autocomplete="off">
             <button class="send-btn" onclick="sendChatMessage()" title="Send"><i data-lucide="arrow-up"></i></button>
           </div>
           <div class="composer-note">AI triage aid, not a diagnosis · nothing leaves this device</div>
