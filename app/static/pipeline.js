@@ -178,8 +178,12 @@ function renderDone(done) {
   const el = document.getElementById("done-banner");
   if (!done) { el.innerHTML = ""; return; }
   const urgent = (live.results || []).filter(r => r.category === "Macrometastasis" || r.category === "Micrometastasis").length;
+  const pre = (live.results || []).filter(r => r.preloaded).length;
+  const lineOne = pre
+    ? `${live.slides_done} slides · ${live.slides_done - pre} analyzed live · ${pre} preloaded`
+    : `${live.slides_done} slides · ${(live.gb_done || 0).toFixed(1)} GB · ${fmtTime(live.elapsed_sec)}`;
   el.innerHTML = `<span class="label">Tray complete</span>
-    <div class="done-line mono">${live.slides_done} slides · ${(live.gb_done || 0).toFixed(1)} GB · ${fmtTime(live.elapsed_sec)}</div>
+    <div class="done-line mono">${lineOne}</div>
     <div class="done-line">${urgent} urgent case${urgent === 1 ? "" : "s"} flagged · first after ${fmtTime(live.first_urgent_sec)} · 0 bytes uploaded</div>`;
 }
 

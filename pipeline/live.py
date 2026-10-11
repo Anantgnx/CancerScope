@@ -93,9 +93,15 @@ def slide_done(m, rank=None):
 def run_done():
     s = _state
     secs = time.time() - s.get("started_at", time.time())
-    _state.update(run="done", slide=None, stage=None)
-    event("run", f"Tray complete: {s.get('slides_done', 0)} slides, {s.get('gb_done', 0):.1f} GB in "
-                 f"{secs / 60:.1f} min · 0 bytes uploaded")
+    pre = sum(1 for r in s.get("results", []) if r.get("preloaded"))
+    live_n = s.get("slides_done", 0) - pre
+    _state.update(run="done", slide=None, stage=None, slides_live=live_n, slides_preloaded=pre)
+    if pre:
+        event("run", f"Tray complete: {s.get('slides_done', 0)} slides ({live_n} analyzed live in {secs / 60:.1f} min, "
+                     f"{pre} preloaded from earlier full runs) · 0 bytes uploaded")
+    else:
+        event("run", f"Tray complete: {s.get('slides_done', 0)} slides, {s.get('gb_done', 0):.1f} GB in "
+                     f"{secs / 60:.1f} min · 0 bytes uploaded")
     _write(force=True)
 
 
