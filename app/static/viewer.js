@@ -293,8 +293,7 @@ async function fetchReport() {
   const historyEl = document.getElementById("chat-history");
 
   panel.classList.add("is-open");
-  currentChatHistory = [];
-  historyEl.innerHTML = "";
+  resetChat();
 
   let reportText = "Drafting report with local Nemotron…";
 
@@ -323,9 +322,18 @@ async function fetchReport() {
     reportText = "Failed to reach local LLM.";
   }
 
-  historyEl.innerHTML = "";
-  appendChatBubble("ai", reportText);
-  currentChatHistory.push({ role: "assistant", content: reportText });
+}
+
+// chat starts on the suggestions; the report itself is shown on the left, not pasted into the chat
+function resetChat() {
+  currentChatHistory = [];
+  document.querySelectorAll("#chat-history .chat-message").forEach(el => el.remove());
+  document.getElementById("chat-empty").classList.remove("is-hidden");
+}
+
+function askSuggestion(btn) {
+  document.getElementById("chat-input").value = btn.textContent;
+  sendChatMessage();
 }
 
 function closeReport() {
@@ -348,10 +356,14 @@ async function sendChatMessage() {
   if (!msg || !currentSlideId) return;
 
   inputEl.value = "";
+  document.getElementById("chat-empty").classList.add("is-hidden");
   appendChatBubble("user", msg);
   currentChatHistory.push({ role: "user", content: msg });
 
-  const loadingId = appendChatBubble("ai", "Thinking...");
+  const sendBtn = document.querySelector(".send-btn");
+  sendBtn.disabled = true;
+  const loadingId = appendChatBubble("ai", "…");
+  document.getElementById(loadingId).classList.add("is-typing");
 
   try {
     const resp = await fetch("/api/chat", {
@@ -361,11 +373,18 @@ async function sendChatMessage() {
     });
     const data = await resp.json();
     const reply = data.reply || "No response from the local model.";
-    document.getElementById(loadingId).innerText = reply;
+    const el = document.getElementById(loadingId);
+    el.classList.remove("is-typing");
+    el.innerText = reply;
     currentChatHistory.push({ role: "assistant", content: reply });
   } catch (err) {
-    document.getElementById(loadingId).innerText = "Connection error.";
+    const el = document.getElementById(loadingId);
+    el.classList.remove("is-typing");
+    el.innerText = "Connection error.";
     currentChatHistory.pop();
+  } finally {
+    sendBtn.disabled = false;
+    document.getElementById("chat-history").scrollTop = 1e9;
   }
 }
 

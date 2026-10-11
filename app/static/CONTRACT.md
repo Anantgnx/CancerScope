@@ -40,6 +40,10 @@ Buttons in index.html call: `toggleHeatmap()`, `toggleOutline()`, `resetView()`,
 **Focus row:** `.focus-row > .focus-num + div(.focus-size, .focus-sub) + .focus-conf + <i data-lucide="chevron-right">`
 **Generic:** `.chip`, `.dot`
 
+**Copilot chat** (inside `#report-panel`): `#chat-history` holds `#chat-empty` (toggle `.is-hidden`; never delete it) and
+`.chat-message.msg-user` / `.chat-message.msg-ai` bubbles (add `.is-typing` to an AI bubble while waiting).
+`#chat-input` + `.send-btn` (set `disabled` while waiting). Suggestion buttons `.suggestion-chip` call `askSuggestion(this)`.
+
 Icons: `<i data-lucide="name"></i>` then call `lucide.createIcons()` after inserting HTML.
 
 ## Server endpoints the viewer uses

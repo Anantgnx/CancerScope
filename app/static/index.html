@@ -134,16 +134,35 @@
           <div id="report-content" class="modal-body"></div>
         </div>
         <div class="copilot-pane">
-          <div class="report-header">
-            <h3>AI Pathology Copilot</h3>
+          <div class="copilot-head">
+            <div class="copilot-title">
+              <span class="copilot-avatar"><i data-lucide="sparkles"></i></span>
+              <div>
+                <div class="copilot-name">Ask CancerScope</div>
+                <div class="copilot-sub">Nemotron · running locally on the GX10</div>
+              </div>
+            </div>
+            <span class="local-badge"><i data-lucide="shield-check"></i>On-device</span>
           </div>
-          <div class="chat-container">
-            <div id="chat-history" class="chat-history"></div>
-            <div class="chat-input-row">
-              <input type="text" id="chat-input" class="chat-input" placeholder="Ask about this slide..." onkeypress="handleChatEnter(event)">
-              <button class="btn-primary" onclick="sendChatMessage()">Send</button>
+
+          <div id="chat-history" class="chat-history">
+            <div id="chat-empty" class="chat-empty">
+              <p class="chat-empty-title">Ask about this slide</p>
+              <p class="chat-empty-sub">Answers use only this slide's measurements.</p>
+              <div class="suggestions">
+                <button class="suggestion-chip" onclick="askSuggestion(this)">Why is this case prioritized?</button>
+                <button class="suggestion-chip" onclick="askSuggestion(this)">Where should I look first?</button>
+                <button class="suggestion-chip" onclick="askSuggestion(this)">How large is the largest focus?</button>
+                <button class="suggestion-chip" onclick="askSuggestion(this)">How much of the tissue is involved?</button>
+              </div>
             </div>
           </div>
+
+          <div class="composer">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask a question about this slide…" onkeypress="handleChatEnter(event)" autocomplete="off">
+            <button class="send-btn" onclick="sendChatMessage()" title="Send"><i data-lucide="arrow-up"></i></button>
+          </div>
+          <div class="composer-note">AI triage aid, not a diagnosis · nothing leaves this device</div>
         </div>
       </div>
     </div>

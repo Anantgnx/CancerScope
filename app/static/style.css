@@ -367,101 +367,115 @@ button { font: inherit; color: inherit; }
 .scalebar-pos { z-index: 4; }
 
 
+/* ===== Report + copilot (modal) ===== */
+.modal-card { width: min(1240px, 95vw); }
 .report-chat-layout {
+  flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
-  flex: 1;
-  min-height: 0;
-  background: var(--surface);
+  grid-template-columns: minmax(0, 1fr) 400px;
 }
+.report-pane { min-height: 0; display: flex; border-right: 1px solid var(--border); }
+.report-pane .modal-body { flex: 1; }
 
-.report-pane {
-  border-right: 1px solid var(--border);
-  min-height: 0;
-}
-
-.copilot-pane {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: #111821;
-}
-
-.report-header {
-  padding: 12px 14px;
+.copilot-pane { display: flex; flex-direction: column; min-height: 0; background: var(--surface); }
+.copilot-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.01);
 }
-
-.report-header h3 {
-  margin: 0;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #c9d1d9;
+.copilot-title { display: flex; align-items: center; gap: 10px; }
+.copilot-avatar {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+  border: 1px solid rgba(56, 189, 197, 0.3);
 }
-
-.chat-container {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  padding: 12px;
-  gap: 8px;
+.copilot-name { font-weight: 650; font-size: 14px; }
+.copilot-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.local-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; color: #6ce9a6;
+  background: rgba(23, 178, 106, 0.08); border: 1px solid rgba(23, 178, 106, 0.3);
 }
+.local-badge svg { width: 13px; height: 13px; }
 
 .chat-history {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 18px 16px;
 }
+.chat-history::-webkit-scrollbar { width: 8px; }
+.chat-history::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
 
-.chat-message {
-  max-width: 92%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.msg-user {
-  background: #1f6feb;
-  color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: 0;
-  margin-left: 12px;
-}
-
-.msg-ai {
-  background: #21262d;
-  border: 1px solid #30363d;
-  color: var(--text);
-  align-self: flex-start;
-  border-bottom-left-radius: 0;
-  margin-right: 12px;
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.chat-input {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 6px;
+.chat-empty { margin: auto 0; text-align: center; padding: 8px 4px; }
+.chat-empty.is-hidden { display: none; }
+.chat-empty-title { margin: 0; font-size: 15px; font-weight: 650; }
+.chat-empty-sub { margin: 4px 0 16px; font-size: 12.5px; color: var(--muted); }
+.suggestions { display: flex; flex-direction: column; gap: 8px; }
+.suggestion-chip {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  background: #0d1117;
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.2s;
+  border-radius: 10px;
+  color: var(--text-2); font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
+.suggestion-chip:hover { border-color: var(--accent); color: var(--text); background: var(--surface-3); }
 
-.chat-input:focus {
-  border-color: #388bfd;
+.chat-message { max-width: 88%; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; animation: rise 0.18s ease-out; }
+.msg-user {
+  align-self: flex-end;
+  padding: 9px 13px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(56, 189, 197, 0.32);
+  color: var(--text);
+  border-radius: 14px 14px 4px 14px;
 }
+.msg-ai {
+  align-self: flex-start;
+  padding: 10px 13px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 14px 14px 14px 4px;
+}
+.msg-ai::before {  /* small speaker label */
+  content: "Nemotron · local";
+  display: block; margin-bottom: 4px;
+  font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent);
+}
+.msg-ai.is-typing { color: transparent; min-width: 64px; }
+.msg-ai.is-typing::after {
+  content: ""; display: block; width: 36px; height: 8px; margin-top: -2px;
+  background:
+    radial-gradient(circle, var(--muted) 3px, transparent 3.5px) 0 50% / 12px 8px repeat-x;
+  animation: typing 1s steps(3) infinite;
+}
+@keyframes typing { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 -12px 0 0); } }
+
+.composer {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 14px;
+  padding: 6px 6px 6px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.chat-input { flex: 1; min-width: 0; padding: 8px 0; background: transparent; border: none; outline: none; color: var(--text); font: inherit; font-size: 13.5px; }
+.chat-input::placeholder { color: var(--muted); }
+.send-btn {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  border: none; border-radius: 10px;
+  background: var(--accent); color: #04262a;
+  cursor: pointer; transition: filter 0.15s, opacity 0.15s;
+}
+.send-btn:hover { filter: brightness(1.08); }
+.send-btn:disabled { opacity: 0.4; cursor: default; }
+.composer-note { padding: 8px 16px 14px; text-align: center; font-size: 11px; color: var(--muted); }
