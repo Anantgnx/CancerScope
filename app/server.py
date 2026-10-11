@@ -226,10 +226,11 @@ def _running():
     return _demo_proc is not None and _demo_proc.poll() is None
 
 
-def _spawn(slides, no_cache=True):
+def _spawn(slides, no_cache=True, holdout=None):
     global _demo_proc
     cmd = [sys.executable, "-m", "pipeline.run_batch", "--slides", ",".join(slides), "--order", "random",
-           "--batch", DEMO_BATCH, "--workers", DEMO_WORKERS, "--reports"] + (["--no-cache"] if no_cache else [])
+           "--batch", DEMO_BATCH, "--workers", DEMO_WORKERS, "--reports"] + (["--no-cache"] if no_cache else []) \
+          + (["--holdout", holdout] if holdout else [])
     log = open(OUTPUTS_DIR / "demo_run.log", "w")
     _demo_proc = subprocess.Popen(cmd, cwd=str(BASE_DIR), stdout=log, stderr=subprocess.STDOUT)
 
@@ -280,8 +281,9 @@ class DemoStart(BaseModel):
 def demo_start(req: DemoStart = DemoStart()):
     if _running():
         return JSONResponse({"ok": False, "detail": "A run is already in progress"}, status_code=409)
-    _spawn(_tray(), no_cache=req.no_cache)
-    return {"ok": True, "slides": _tray()}
+    holdout = DEMO_HOLDOUT if config.slide_path(DEMO_HOLDOUT).exists() else None
+    _spawn(_tray(), no_cache=req.no_cache, holdout=holdout)
+    return {"ok": True, "slides": _tray(), "holdout": holdout}
 
 
 @app.post("/api/demo/reset")

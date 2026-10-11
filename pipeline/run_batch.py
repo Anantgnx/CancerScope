@@ -59,7 +59,7 @@ def queue_rank(slide_id):
 
 
 def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4, reports=False, use_cache=True,
-        started=False):
+        started=False, holdout=None):
     """Process slides in order; one failure doesn't stop the batch; picks up injected slides. Returns results."""
     slide_ids = list(slide_ids)
     if not started:   # main() already announced the run before loading models
@@ -70,7 +70,12 @@ def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4, rep
     while True:
         # injected slides (an urgent case from the scanner) go next, not to the back of the tray
         slide_ids[i:i] = take_injected(slide_ids)
-        live._state["slides_total"] = len(slide_ids)
+        if i >= len(slide_ids) and holdout and holdout not in slide_ids:
+            # nobody dropped in the urgent case: it arrives as the morning's last slide, so the tray always ends complete
+            slide_ids.append(holdout)
+            set_queued([holdout])
+            live.event("inject", "Last slide of the morning arrived from the scanner", holdout)
+        live._state["slides_total"] = len(slide_ids) + (1 if holdout and holdout not in slide_ids else 0)
         if i >= len(slide_ids):
             break
         sid = slide_ids[i]
@@ -121,6 +126,7 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--reports", action="store_true", help="write report.md/.html (Nemotron) after each slide")
     ap.add_argument("--no-cache", action="store_true", help="re-embed every slide (live demo: really run UNI2-h)")
+    ap.add_argument("--holdout", help="slide expected to arrive mid-run (demo); appended at the end if never injected")
     args = ap.parse_args()
 
     ids = args.slides.split(",") if args.slides else all_slide_ids()
@@ -143,15 +149,17 @@ def main():
     print(f"device {device}" + (f" ({torch.cuda.get_device_name(0)})" if device == "cuda" else "")
           + f", {len(ids)} slides: {', '.join(ids)}", flush=True)
     # announce the run before the slow model load, so the page shows progress immediately
+    if args.holdout and not config.slide_path(args.holdout).exists():
+        args.holdout = None
     set_queued(ids)
-    live.run_start(ids)
+    live.run_start(ids, expected_extra=1 if args.holdout else 0)   # the held-out slide arrives later
     live.stage("load", None, "Loading UNI2-h (681M parameters) and the tumor classifier onto the GPU")
     t_load = time.perf_counter()
     model = load_uni2h(device)
     classifier = load_classifier(device)
     live.event("run", f"Models ready in {time.perf_counter() - t_load:.0f} s")
     run(ids, model, classifier, device, stride=args.stride, batch=args.batch, workers=args.workers,
-        reports=args.reports, use_cache=not args.no_cache, started=True)
+        reports=args.reports, use_cache=not args.no_cache, started=True, holdout=args.holdout)
 
 
 if __name__ == "__main__":

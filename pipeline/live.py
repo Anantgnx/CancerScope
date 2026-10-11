@@ -44,15 +44,16 @@ def event(kind, msg, slide_id=None, **data):
         f.write(json.dumps(line) + "\n")
 
 
-def run_start(slide_ids):
+def run_start(slide_ids, expected_extra=0):
     global _state, _seq
     config.OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
     _paths()[1].write_text("")  # new run, new log
     _seq = 0
-    _state = {"run": "running", "started_at": time.time(), "slides_total": len(slide_ids), "slides_done": 0,
+    _state = {"run": "running", "started_at": time.time(), "slides_total": len(slide_ids) + expected_extra, "slides_done": 0,
               "gb_done": 0.0, "tiles_done_total": 0, "first_urgent_sec": None, "slide": None, "stage": None,
               "tiles_done": 0, "tiles_total": 0, "tiles_per_sec": 0.0, "results": []}
-    event("run", f"Tray received: {len(slide_ids)} slides, processing on-device")
+    more = f", {expected_extra} more expected from the scanner" if expected_extra else ""
+    event("run", f"Tray received: {len(slide_ids)} slides{more}, processing on-device")
     _write(force=True)
 
 
