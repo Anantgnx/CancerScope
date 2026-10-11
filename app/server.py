@@ -222,8 +222,48 @@ def _tray():
     return sorted(p.stem for p in config.SLIDES_DIR.glob("*.tif") if p.stem != DEMO_HOLDOUT)
 
 
+RUN_PID = OUTPUTS_DIR / "run.pid"   # survives server reloads, so a run is never orphaned
+
+
+def _run_pid():
+    try:
+        pid = int(RUN_PID.read_text())
+        os.kill(pid, 0)          # raises if the process is gone
+        return pid
+    except (OSError, ValueError):
+        return None
+
+
 def _running():
-    return _demo_proc is not None and _demo_proc.poll() is None
+    if _demo_proc is not None and _demo_proc.poll() is None:
+        return True
+    return _run_pid() is not None
+
+
+def _stop_run(timeout=15):
+    """Stop the current run and its DataLoader workers (whole process group), wherever it was started from."""
+    import signal
+    pid = _demo_proc.pid if _demo_proc is not None and _demo_proc.poll() is None else _run_pid()
+    if pid is None:
+        RUN_PID.unlink(missing_ok=True)
+        return
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGTERM)
+    except OSError:
+        pass
+    deadline = _time.time() + timeout
+    while _time.time() < deadline:
+        try:
+            os.kill(pid, 0)
+            _time.sleep(0.2)
+        except OSError:
+            break
+    else:
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except OSError:
+            pass
+    RUN_PID.unlink(missing_ok=True)
 
 
 def _spawn(slides, no_cache=True, holdout=None):
@@ -232,7 +272,10 @@ def _spawn(slides, no_cache=True, holdout=None):
            "--batch", DEMO_BATCH, "--workers", DEMO_WORKERS, "--reports"] + (["--no-cache"] if no_cache else []) \
           + (["--holdout", holdout] if holdout else [])
     log = open(OUTPUTS_DIR / "demo_run.log", "w")
-    _demo_proc = subprocess.Popen(cmd, cwd=str(BASE_DIR), stdout=log, stderr=subprocess.STDOUT)
+    _stop_run()   # never two runs at once
+    _demo_proc = subprocess.Popen(cmd, cwd=str(BASE_DIR), stdout=log, stderr=subprocess.STDOUT,
+                                  start_new_session=True)   # own process group: workers stop with it
+    RUN_PID.write_text(str(_demo_proc.pid))
 
 
 @app.get("/api/live")
@@ -240,8 +283,7 @@ def get_live():
     p = DATA_DIR / "live.json"
     state = json.loads(p.read_text()) if p.exists() else {"run": "idle"}
     ff_active = "_ff_thread" in globals() and _ff_thread is not None and _ff_thread.is_alive()
-    stale = _time.time() - state.get("updated_at", 0) > 30   # e.g. the server restarted mid-run
-    if state.get("run") == "running" and not _running() and not ff_active and (_demo_proc is not None or stale):
+    if state.get("run") == "running" and not _running() and not ff_active:
         state["run"] = "stopped"
     state["holdout"] = DEMO_HOLDOUT
     state["holdout_available"] = config.slide_path(DEMO_HOLDOUT).exists()
@@ -291,9 +333,7 @@ def demo_reset():
     """Back to the 'tray just arrived' state: tray slides queued, held-out slide absent, log cleared."""
     from pipeline import live
     from pipeline.index import atomic_write_text
-    if _running():
-        _demo_proc.terminate()
-        _demo_proc.wait(timeout=10)
+    _stop_run()
     tray = _tray()
     index = {"schema_version": config.SCHEMA_VERSION, "slides": [
         {"slide_id": s, "filename": f"{s}.tif", "status": "queued", "urgency_score": None, "category": None,
@@ -422,9 +462,7 @@ def demo_fastforward(req: DemoFastForward = DemoFastForward()):
     global _ff_thread
     if _ff_thread is not None and _ff_thread.is_alive():
         return JSONResponse({"ok": False, "detail": "Fast-forward already running"}, status_code=409)
-    if _running():
-        _demo_proc.terminate()
-        _demo_proc.wait(timeout=15)
+    _stop_run()
     (DATA_DIR / "inject.json").unlink(missing_ok=True)
     idx = json.loads((DATA_DIR / "index.json").read_text()) if (DATA_DIR / "index.json").exists() else {"slides": []}
     status = {e["slide_id"]: e.get("status") for e in idx["slides"]}
