@@ -324,13 +324,16 @@ def demo_start(req: DemoStart = DemoStart()):
     if _running():
         return JSONResponse({"ok": False, "detail": "A run is already in progress"}, status_code=409)
     holdout = DEMO_HOLDOUT if config.slide_path(DEMO_HOLDOUT).exists() else None
+    if holdout:   # show it in the queue as still on the scanner, so the tray reads 10 from the start
+        from pipeline.index import update_index
+        update_index(holdout, status="expected", urgency_score=None, category=None, gb_processed=0.0)
     _spawn(_tray(), no_cache=req.no_cache, holdout=holdout)
     return {"ok": True, "slides": _tray(), "holdout": holdout}
 
 
 @app.post("/api/demo/reset")
 def demo_reset():
-    """Back to the 'tray just arrived' state: tray slides queued, held-out slide absent, log cleared."""
+    """Back to the 'tray just arrived' state: tray slides queued, held-out slide 'expected' (still on the scanner)."""
     from pipeline import live
     from pipeline.index import atomic_write_text
     _stop_run()
@@ -338,6 +341,9 @@ def demo_reset():
     index = {"schema_version": config.SCHEMA_VERSION, "slides": [
         {"slide_id": s, "filename": f"{s}.tif", "status": "queued", "urgency_score": None, "category": None,
          "gb_processed": 0.0, "output_path": s} for s in tray]}
+    if config.slide_path(DEMO_HOLDOUT).exists():
+        index["slides"].append({"slide_id": DEMO_HOLDOUT, "filename": f"{DEMO_HOLDOUT}.tif", "status": "expected",
+                                "urgency_score": None, "category": None, "gb_processed": 0.0, "output_path": DEMO_HOLDOUT})
     atomic_write_text(DATA_DIR / "index.json", json.dumps(index, indent=2))
     (DATA_DIR / "inject.json").unlink(missing_ok=True)
     live.set_idle()

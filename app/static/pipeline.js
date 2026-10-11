@@ -99,7 +99,7 @@ function renderRun() {
 
   document.getElementById("btn-start").disabled = running;
   document.getElementById("btn-start").querySelector("span").textContent = done ? "Run again" : "Start tray";
-  const injected = Object.keys(cards).includes(live.holdout);
+  const injected = cards[live.holdout] && cards[live.holdout].dataset.status !== "expected";
   document.getElementById("btn-inject").disabled = !running || !live.holdout_available || injected || injectRequested || ffRequested;
   document.getElementById("btn-ff").disabled = !running || ffRequested;
   if (!running) ffRequested = false;
@@ -232,9 +232,9 @@ function renderQueue(slides) {
     el.className = `queue-card ${done ? PRIO[s.category] || "" : ""} is-${s.status}`;
     const img = el.querySelector(".queue-thumb");
     if ((done || s.status === "processing") && !img.getAttribute("src")) img.src = `/api/slide/${s.slide_id}/thumbnail?t=${Date.now()}`;
-    if (s.status === "queued") img.removeAttribute("src");
+    if (s.status === "queued" || s.status === "expected") img.removeAttribute("src");
     el.querySelector(".queue-score").innerHTML = done ? s.urgency_score.toFixed(1) : `<small>${s.status === "processing" ? "···" : "—"}</small>`;
-    el.querySelector(".chip").textContent = done ? SHORT[s.category] || s.category : s.status === "processing" ? "Analyzing" : s.status === "error" ? "Error" : "Queued";
+    el.querySelector(".chip").textContent = done ? SHORT[s.category] || s.category : s.status === "processing" ? "Analyzing" : s.status === "error" ? "Error" : s.status === "expected" ? "On scanner" : "Queued";
   });
   Object.keys(cards).filter(id => !slides.some(s => s.slide_id === id)).forEach(id => { cards[id].remove(); delete cards[id]; });
   const want = slides.map(s => s.slide_id), have = [...q.children].map(e => e.dataset.id);

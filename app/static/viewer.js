@@ -122,7 +122,7 @@ function updateCard(el, s, m) {
 
   el.querySelector(".queue-score").innerHTML = done
     ? s.urgency_score.toFixed(1) : `<small>${s.status}</small>`;
-  el.querySelector(".chip").textContent = done ? (SHORT[s.category] || s.category) : (s.status === "processing" ? "Analyzing…" : "Queued");
+  el.querySelector(".chip").textContent = done ? (SHORT[s.category] || s.category) : (s.status === "processing" ? "Analyzing…" : s.status === "expected" ? "On scanner" : "Queued");
   el.querySelector(".measure").textContent = done && m
     ? (m.num_tumor_regions ? `${m.largest_region_extent_mm.toFixed(2)} mm · ${m.num_tumor_regions} ${m.num_tumor_regions === 1 ? "focus" : "foci"}` : "No suspicious foci")
     : "";
