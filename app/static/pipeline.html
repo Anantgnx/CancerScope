@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CancerScope · Live pipeline</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/vendor/lucide/lucide.min.js"></script>
+  <script src="/static/vendor/gsap/gsap.min.js"></script>
+</head>
+<body class="page-pipeline">
+  <header id="topbar">
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="12.5" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="16" cy="16" r="4.5" fill="currentColor"/>
+      </svg>
+      <span class="wordmark">CancerScope</span>
+    </a>
+    <div class="status-strip">
+      <div class="cell"><span class="label">Run</span><span class="value" id="k-run"><i class="state-dot is-idle"></i>Idle</span></div>
+      <div class="cell"><span class="label">Elapsed</span><span class="value mono" id="k-elapsed">0:00</span></div>
+      <div class="cell"><span class="label">Slides</span><span class="value mono" id="k-slides">0 / 0</span></div>
+      <div class="cell"><span class="label">Tiles / s</span><span class="value mono" id="k-rate">–</span></div>
+      <div class="cell"><span class="label">Data analyzed</span><span class="value mono" id="k-gb">0.0 GB</span></div>
+      <div class="cell"><span class="label">Uploaded</span><span class="value mono is-ok">0 B</span></div>
+      <div class="cell"><span class="label">Network</span><span class="value" id="k-net"><i class="state-dot is-ok"></i>Online</span></div>
+      <div class="cell"><span class="label">GPU</span><span class="value mono" id="k-gpu">–</span></div>
+    </div>
+    <nav class="top-links"><a href="/app">Dashboard <span aria-hidden="true">→</span></a></nav>
+  </header>
+
+  <div id="layout">
+    <aside id="sidebar">
+      <div class="panel-head">
+        <span class="label">Triage queue</span>
+        <span class="label mono" id="queue-count">0</span>
+      </div>
+      <div class="panel-note">Re-sorts live as each slide is scored</div>
+      <div id="queue"></div>
+    </aside>
+
+    <main id="stage">
+      <section class="graph-wrap">
+        <div class="section-head"><span class="label">Pipeline</span><span class="hint mono" id="graph-slide">waiting for a tray</span></div>
+        <div class="graph" id="graph">
+          <svg class="graph-edges" id="graph-edges"></svg>
+          <div class="graph-row">
+            <div class="node" data-stage="read"><i data-lucide="hard-drive"></i><div class="node-title">Read slide</div><div class="node-sub">OpenSlide · gigapixel TIFF</div><div class="node-metric mono" data-m="read">–</div><span class="node-state">Idle</span></div>
+            <div class="node" data-stage="tissue"><i data-lucide="scan"></i><div class="node-title">Find tissue</div><div class="node-sub">skip blank glass</div><div class="node-metric mono" data-m="tissue">–</div><span class="node-state">Idle</span></div>
+            <div class="node" data-stage="tile"><i data-lucide="grid-3x3"></i><div class="node-title">Tile at 10×</div><div class="node-sub">87 µm tiles</div><div class="node-metric mono" data-m="tile">–</div><span class="node-state">Idle</span></div>
+            <div class="node is-gpu" data-stage="embed"><i data-lucide="cpu"></i><div class="node-title">UNI2-h</div><div class="node-sub">ViT-H · 681M params · GPU</div><div class="node-metric mono" data-m="embed">–</div><span class="node-state">Idle</span></div>
+          </div>
+          <div class="graph-row">
+            <div class="node" data-stage="classify"><i data-lucide="activity"></i><div class="node-title">Classify tiles</div><div class="node-sub">tumor probability</div><div class="node-metric mono" data-m="classify">–</div><span class="node-state">Idle</span></div>
+            <div class="node" data-stage="regions"><i data-lucide="shapes"></i><div class="node-title">Find regions</div><div class="node-sub">heatmap → foci</div><div class="node-metric mono" data-m="regions">–</div><span class="node-state">Idle</span></div>
+            <div class="node" data-stage="urgency"><i data-lucide="siren"></i><div class="node-title">Rank urgency</div><div class="node-sub">clinical size rules</div><div class="node-metric mono" data-m="urgency">–</div><span class="node-state">Idle</span></div>
+            <div class="node is-gpu" data-stage="report"><i data-lucide="file-text"></i><div class="node-title">Draft report</div><div class="node-sub">Nemotron · local · verified</div><div class="node-metric mono" data-m="report">–</div><span class="node-state">Idle</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="now">
+        <div class="now-visual">
+          <img id="now-thumb" alt="">
+          <img id="now-heat" alt="">
+          <div class="now-empty" id="now-empty">No slide in progress</div>
+        </div>
+        <div class="now-info">
+          <span class="label">Now analyzing</span>
+          <div class="now-id mono" id="now-id">–</div>
+          <div class="now-stage" id="now-stage">Press Start to run this morning's tray.</div>
+          <div class="progress"><span id="now-bar"></span></div>
+          <div class="now-numbers">
+            <div><span class="label">Tiles</span><b class="mono" id="now-tiles">–</b></div>
+            <div><span class="label">Speed</span><b class="mono" id="now-rate">–</b></div>
+            <div><span class="label">First urgent case</span><b class="mono" id="now-first">–</b></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside id="case-panel" class="log-panel">
+      <div class="controls">
+        <button class="btn btn-accent" id="btn-start" onclick="startTray()"><i data-lucide="play"></i><span>Start tray</span></button>
+        <button class="btn btn-alert" id="btn-inject" onclick="injectUrgent()" disabled><i data-lucide="zap"></i><span>Drop in urgent case</span></button>
+        <div class="controls-row">
+          <button class="btn" id="btn-reset" onclick="resetTray()"><i data-lucide="rotate-ccw"></i><span>Reset</span></button>
+          <a class="btn" id="btn-review" href="/app"><span>Review cases</span><i data-lucide="arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="done-banner" id="done-banner"></div>
+      <div class="section-head"><span class="label">Activity</span><span class="hint mono" id="log-count">0 events</span></div>
+      <div class="log" id="log"></div>
+    </aside>
+  </div>
+
+  <script src="/static/pipeline.js"></script>
+  <script type="module">
+    import autoAnimate from "/static/vendor/auto-animate/index.mjs";
+    autoAnimate(document.getElementById("queue"), { duration: 500 });
+  </script>
+</body>
+</html>

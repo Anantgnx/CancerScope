@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CancerScope · Find the urgent slide first</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/vendor/gsap/gsap.min.js"></script>
+</head>
+<body class="page-intro">
+  <header class="intro-nav">
+    <div class="brand-inline">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="12.5" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="16" cy="16" r="4.5" fill="currentColor"/>
+      </svg>
+      <span class="wordmark">CancerScope</span>
+    </div>
+    <nav class="intro-links">
+      <a href="/pipeline">Live pipeline</a>
+      <a href="/app">Dashboard</a>
+      <span class="device-pill" id="device-pill"><span class="pulse-dot"></span>On-device · ASUS GX10</span>
+    </nav>
+  </header>
+
+  <main class="intro-main">
+    <section class="intro-copy">
+      <span class="label intro-kicker">Local AI pathology triage · ASUS Ascent GX10</span>
+      <h1 class="intro-title">
+        <span class="line">80 slides arrived</span>
+        <span class="line">this morning.</span>
+        <span class="line is-strong">One is cancer.</span>
+      </h1>
+      <p class="intro-sub">
+        CancerScope reads every lymph node slide on a box under the desk, ranks the tray by urgency,
+        and drafts the report, so the most urgent patient is seen first. Nothing leaves the hospital.
+      </p>
+      <div class="intro-cta">
+        <a class="btn-solid" href="/pipeline?autostart=1">Run this morning's tray <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/app">Open dashboard</a>
+      </div>
+      <div class="intro-tags">
+        <span><b id="tag-slides">10</b> slides · <b id="tag-gb">9.4</b> GB</span>
+        <span><b>0</b> bytes uploaded</span>
+        <span>Works offline</span>
+        <span>UNI2-h + Nemotron on one box</span>
+      </div>
+    </section>
+
+    <section class="intro-visual" aria-hidden="true">
+      <div class="tray-label label">This morning's tray · scanner order</div>
+      <div class="tray" id="tray"></div>
+      <div class="tray-callout" id="tray-callout">
+        <span class="label">Found first</span>
+        <b class="mono" id="callout-id">tumor_082</b>
+        <span class="callout-cat">Macrometastasis · STAT</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="intro-facts">
+    <div class="fact"><span class="fact-num mono" data-to="41" data-prefix="+" data-suffix="%">+41%</span><span class="fact-text">pathology workload, while US pathologists fell <b>17%</b> (2007–2017)</span></div>
+    <div class="fact"><span class="fact-num mono" data-to="60" data-suffix=" days">60 days</span><span class="fact-text">possible treatment delay in understaffed labs</span></div>
+    <div class="fact"><span class="fact-num mono" data-to="3" data-prefix="~" data-suffix=" TB">~3 TB</span><span class="fact-text">of new slide images per busy lab, per day: too much to upload</span></div>
+    <div class="fact"><span class="fact-num mono" data-to="128" data-suffix=" GB">128 GB</span><span class="fact-text">unified memory holds the vision model and the LLM at once</span></div>
+  </footer>
+
+  <script src="/static/intro.js"></script>
+</body>
+</html>

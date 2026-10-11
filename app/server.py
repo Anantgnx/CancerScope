@@ -23,8 +23,18 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/")
+def get_intro():
+    return FileResponse(STATIC_DIR / "intro.html")
+
+
+@app.get("/app")
 def get_index():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/pipeline")
+def get_pipeline():
+    return FileResponse(STATIC_DIR / "pipeline.html")
 
 
 @app.get("/api/queue")
@@ -184,6 +194,188 @@ def chat_with_model(req: ChatRequest):
 
 
     
+
+
+# ---- Live run + demo controls (pipeline page) ----
+import socket
+import subprocess
+import time as _time
+from fastapi.responses import JSONResponse
+
+DEMO_HOLDOUT = os.getenv("DEMO_HOLDOUT", "tumor_082")   # arrives mid-run via "Drop in an urgent case"
+DEMO_BATCH = os.getenv("DEMO_BATCH", "256")
+DEMO_WORKERS = os.getenv("DEMO_WORKERS", "8")
+_demo_proc = None
+_cache = {}
+
+
+def _cached(key, ttl, fn):
+    hit = _cache.get(key)
+    if hit and _time.time() - hit[0] < ttl:
+        return hit[1]
+    val = fn()
+    _cache[key] = (_time.time(), val)
+    return val
+
+
+def _tray():
+    return sorted(p.stem for p in config.SLIDES_DIR.glob("*.tif") if p.stem != DEMO_HOLDOUT)
+
+
+def _running():
+    return _demo_proc is not None and _demo_proc.poll() is None
+
+
+def _spawn(slides, no_cache=True):
+    global _demo_proc
+    cmd = [sys.executable, "-m", "pipeline.run_batch", "--slides", ",".join(slides), "--order", "random",
+           "--batch", DEMO_BATCH, "--workers", DEMO_WORKERS, "--reports"] + (["--no-cache"] if no_cache else [])
+    log = open(OUTPUTS_DIR / "demo_run.log", "w")
+    _demo_proc = subprocess.Popen(cmd, cwd=str(BASE_DIR), stdout=log, stderr=subprocess.STDOUT)
+
+
+@app.get("/api/live")
+def get_live():
+    p = DATA_DIR / "live.json"
+    state = json.loads(p.read_text()) if p.exists() else {"run": "idle"}
+    if state.get("run") == "running" and not _running() and _demo_proc is not None:
+        state["run"] = "stopped"
+    state["holdout"] = DEMO_HOLDOUT
+    state["holdout_available"] = config.slide_path(DEMO_HOLDOUT).exists()
+    return state
+
+
+@app.get("/api/events")
+def get_events(since: int = 0):
+    p = DATA_DIR / "events.jsonl"
+    if not p.exists():
+        return {"events": []}
+    out = []
+    for line in p.read_text().splitlines():
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            continue  # line being written
+        if e.get("seq", 0) > since:
+            out.append(e)
+    return {"events": out[-300:]}
+
+
+@app.get("/api/slide/{slide_id}/heatmap_live")
+def get_heatmap_live(slide_id: str):
+    for name in ("heatmap_live.png", "heatmap.png"):
+        p = DATA_DIR / slide_id / name
+        if p.exists():
+            return FileResponse(p, media_type="image/png", headers={"Cache-Control": "no-store"})
+    raise HTTPException(status_code=404, detail="No heatmap yet")
+
+
+class DemoStart(BaseModel):
+    no_cache: bool = True
+
+
+@app.post("/api/demo/start")
+def demo_start(req: DemoStart = DemoStart()):
+    if _running():
+        return JSONResponse({"ok": False, "detail": "A run is already in progress"}, status_code=409)
+    _spawn(_tray(), no_cache=req.no_cache)
+    return {"ok": True, "slides": _tray()}
+
+
+@app.post("/api/demo/reset")
+def demo_reset():
+    """Back to the 'tray just arrived' state: tray slides queued, held-out slide absent, log cleared."""
+    from pipeline import live
+    from pipeline.index import atomic_write_text
+    if _running():
+        _demo_proc.terminate()
+        _demo_proc.wait(timeout=10)
+    tray = _tray()
+    index = {"schema_version": config.SCHEMA_VERSION, "slides": [
+        {"slide_id": s, "filename": f"{s}.tif", "status": "queued", "urgency_score": None, "category": None,
+         "gb_processed": 0.0, "output_path": s} for s in tray]}
+    atomic_write_text(DATA_DIR / "index.json", json.dumps(index, indent=2))
+    (DATA_DIR / "inject.json").unlink(missing_ok=True)
+    live.set_idle()
+    return {"ok": True, "slides": tray}
+
+
+@app.post("/api/demo/restore")
+def demo_restore():
+    """Safety net: rebuild index.json from the metrics.json files already on disk (every slide 'done')."""
+    from pipeline.index import atomic_write_text
+    if _running():
+        return JSONResponse({"ok": False, "detail": "A run is in progress"}, status_code=409)
+    slides = []
+    for p in sorted(DATA_DIR.glob("*/metrics.json")):
+        if p.parent.name.startswith("_"):
+            continue
+        m = json.loads(p.read_text())
+        slides.append({"slide_id": m["slide_id"], "filename": m["filename"], "status": "done",
+                       "urgency_score": m["urgency_score"], "category": m["category"],
+                       "gb_processed": m["gb_processed"], "output_path": m["slide_id"]})
+    atomic_write_text(DATA_DIR / "index.json", json.dumps({"schema_version": config.SCHEMA_VERSION, "slides": slides}, indent=2))
+    return {"ok": True, "slides": len(slides)}
+
+
+class DemoInject(BaseModel):
+    slide_id: str | None = None
+
+
+@app.post("/api/demo/inject")
+def demo_inject(req: DemoInject = DemoInject()):
+    sid = req.slide_id or DEMO_HOLDOUT
+    if not config.slide_path(sid).exists():
+        raise HTTPException(status_code=404, detail=f"{sid} not on this machine")
+    if _running():
+        (DATA_DIR / "inject.json").write_text(json.dumps([sid]))
+        return {"ok": True, "slide_id": sid, "mode": "joins the running tray"}
+    _spawn([sid])
+    return {"ok": True, "slide_id": sid, "mode": "processing now"}
+
+
+_offline_strikes = 0
+
+
+def _online():
+    """Online if any probe connects; reports offline only after two consecutive failed checks (no flicker)."""
+    global _offline_strikes
+    for host in (("1.1.1.1", 443), ("8.8.8.8", 53)):
+        try:
+            socket.create_connection(host, timeout=0.8).close()
+            _offline_strikes = 0
+            return True
+        except OSError:
+            pass
+    _offline_strikes += 1
+    return _offline_strikes < 2
+
+
+def _gpu():
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=name,utilization.gpu,power.draw,temperature.gpu",
+                              "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=2).stdout
+        name, util, power, temp = [v.strip() for v in out.splitlines()[0].split(",")]
+        num = lambda v: float(v) if v.replace(".", "", 1).isdigit() else None  # noqa: E731
+        return {"name": name, "util": num(util), "power_w": num(power), "temp_c": num(temp)}
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _models():
+    try:
+        import urllib.request
+        base = config.LLM_BASE_URL.rsplit("/v1", 1)[0]
+        ps = json.load(urllib.request.urlopen(base + "/api/ps", timeout=1))
+        return [{"name": m["name"], "gb": round(m.get("size_vram", m.get("size", 0)) / 1e9, 1)} for m in ps.get("models", [])]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+@app.get("/api/system")
+def get_system():
+    return {"online": _cached("online", 3, _online), "gpu": _cached("gpu", 1.5, _gpu),
+            "llm": _cached("models", 3, _models), "run_active": _running()}
 
 
 if __name__ == "__main__":

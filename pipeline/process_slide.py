@@ -18,6 +18,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 import config
+from pipeline import live
 from pipeline.index import atomic_save, atomic_write_text, update_index
 from pipeline.models import embed, load_classifier, load_uni2h
 from pipeline.slide_metrics import build_metrics, heatmap_rgba
@@ -63,7 +64,7 @@ class TileBlocks(Dataset):
         return torch.from_numpy(tiles), torch.tensor(cells)
 
 
-def embed_tiles(path, level, downsample, coords, model, device, batch, workers):
+def embed_tiles(path, level, downsample, coords, model, device, batch, workers, on_chunk=None):
     loader = DataLoader(TileBlocks(path, level, downsample, coords), batch_size=None, shuffle=False,
                         num_workers=workers, pin_memory=device == "cuda", prefetch_factor=4 if workers else None)
     feats, cells, buf, buf_cells = [], [], [], []
@@ -72,12 +73,17 @@ def embed_tiles(path, level, downsample, coords, model, device, batch, workers):
     def flush():
         nonlocal done
         x = torch.cat(buf)
-        for i in range(0, len(x), batch):
-            feats.append(embed(model, x[i:i + batch], device))
-        cells.append(torch.cat(buf_cells))
+        chunk = torch.cat([embed(model, x[i:i + batch], device) for i in range(0, len(x), batch)])
+        cc = torch.cat(buf_cells)
+        feats.append(chunk)
+        cells.append(cc)
         done += len(x)
         buf.clear()
         buf_cells.clear()
+        rate = done / max(time.perf_counter() - t0, 1e-6)
+        live.progress(done, len(coords), rate)
+        if on_chunk:
+            on_chunk(chunk, cc)
 
     for tiles, cc in loader:
         buf.append(tiles)
@@ -103,8 +109,12 @@ def process_slide(slide_id, model=None, classifier=None, device=None, stride=1, 
     device = device or config.get_device()
     path = config.slide_path(slide_id)
     update_index(slide_id, status="processing", filename=path.name)
+    live.slide_start(slide_id, path.stat().st_size / 1e9)
     try:
         slide = openslide.OpenSlide(str(path))
+        out = config.slide_output_dir(slide_id)
+        out.mkdir(parents=True, exist_ok=True)
+        atomic_save(out / "thumbnail.png", lambda p: slide.get_thumbnail((512, 512)).save(p, format="PNG"))
         w, h = slide.dimensions
         mpp = float(slide.properties[openslide.PROPERTY_NAME_MPP_X])
         level = pick_level(slide, mpp)
@@ -116,29 +126,47 @@ def process_slide(slide_id, model=None, classifier=None, device=None, stride=1, 
         tissue = tissue_mask(slide, gw, gh, ds)
         coords = np.argwhere(tissue)[::stride]
         print(f"  tissue: {int(tissue.sum())} tiles, scoring {len(coords)} (stride {stride})", flush=True)
+        tile_mm2 = (ds * mpp) ** 2 / 1e6
+        live.stage("tissue", slide_id, f"Tissue detected: {tissue.sum() * tile_mm2:.1f} mm², blank glass skipped",
+                   tissue_mm2=round(float(tissue.sum() * tile_mm2), 1), regions=None)
+        live.stage("tile", slide_id, f"{len(coords):,} tiles at 10× ({ds * mpp:.0f} µm each)", tiles_total=len(coords))
+
+        if classifier is None:
+            classifier = load_classifier(device)
+        heat = np.zeros((gh, gw), dtype=np.float32)
+        last_png = [0.0]
+
+        def on_chunk(chunk_feats, chunk_cells):  # score tiles as they stream in; the page watches the heatmap grow
+            heat[chunk_cells[:, 0].numpy(), chunk_cells[:, 1].numpy()] = classifier(chunk_feats).numpy()
+            if time.perf_counter() - last_png[0] > 1.5:
+                last_png[0] = time.perf_counter()
+                atomic_save(out / "heatmap_live.png", lambda p: heatmap_rgba(heat).save(p, format="PNG"))
 
         cache = config.SLIDE_FEATURES_DIR / f"{slide_id}.npz"
         if use_cache and cache.exists() and np.load(cache)["stride"] == stride:
             d = np.load(cache)
             feats, cells = torch.from_numpy(d["features"]), torch.from_numpy(d["cells"])
             print(f"  loaded cached features {tuple(feats.shape)}", flush=True)
+            live.stage("embed", slide_id, "UNI2-h features loaded from cache")
+            live.progress(len(feats), len(feats), 0)
         else:
             if model is None:
                 model = load_uni2h(device)
-            feats, cells = embed_tiles(path, level, ds, coords, model, device, batch, workers)
+            live.stage("embed", slide_id, "UNI2-h (ViT-H, 681M params) embedding tiles on the GPU · classifier scoring as they stream")
+            t_embed = time.perf_counter()
+            feats, cells = embed_tiles(path, level, ds, coords, model, device, batch, workers, on_chunk=on_chunk)
+            live.event("stage", f"{len(feats):,} tiles embedded at {len(feats) / max(time.perf_counter() - t_embed, 1e-6):.0f} tiles/s",
+                       slide_id, stage="classify")
             config.SLIDE_FEATURES_DIR.mkdir(parents=True, exist_ok=True)
             atomic_save(cache, lambda p: np.savez(p, features=feats.numpy(), cells=cells.numpy(),
                                                   level=level, downsample=ds, stride=stride))
 
-        if classifier is None:
-            classifier = load_classifier(device)
+        live.stage("classify", slide_id)
         probs = classifier(feats).numpy() if len(feats) else np.zeros(0, np.float32)
-        heat = np.zeros((gh, gw), dtype=np.float32)
         heat[cells[:, 0].numpy(), cells[:, 1].numpy()] = probs
+        atomic_save(out / "heatmap_live.png", lambda p: heatmap_rgba(heat).save(p, format="PNG"))
 
-        out = config.slide_output_dir(slide_id)
-        out.mkdir(parents=True, exist_ok=True)
-        tile_mm2 = (ds * mpp) ** 2 / 1e6
+        live.stage("regions", slide_id)
         metrics = build_metrics(
             slide_id, path.name, heat, ds, w, h, mpp,
             tissue_area_mm2=float(tissue.sum() * tile_mm2),
@@ -146,9 +174,12 @@ def process_slide(slide_id, model=None, classifier=None, device=None, stride=1, 
             gb_processed=path.stat().st_size / 1e9,
             processing_time_sec=time.perf_counter() - t_start,
         )
+        n = metrics["num_tumor_regions"]
+        live.event("stage", f"{n} suspicious region{'s' if n != 1 else ''} after filtering specks" if n else
+                   "No suspicious regions", slide_id, stage="regions")
+        live.stage("urgency", slide_id, regions=n)
         atomic_save(out / "heatmap.npy", lambda p: np.save(p, heat))
         atomic_save(out / "heatmap.png", lambda p: heatmap_rgba(heat).save(p, format="PNG"))
-        atomic_save(out / "thumbnail.png", lambda p: slide.get_thumbnail((512, 512)).save(p, format="PNG"))
         atomic_write_text(out / "metrics.json", json.dumps(metrics, indent=2))
         update_index(slide_id, status="done", urgency_score=metrics["urgency_score"],
                      category=metrics["category"], gb_processed=metrics["gb_processed"])
@@ -156,8 +187,9 @@ def process_slide(slide_id, model=None, classifier=None, device=None, stride=1, 
               f"urgency {metrics['urgency_score']}, {metrics['num_tumor_regions']} regions, "
               f"max conf {metrics['max_confidence']:.3f}", flush=True)
         return metrics
-    except Exception:
+    except Exception as e:
         update_index(slide_id, status="error")
+        live.event("error", f"{type(e).__name__}: {e}", slide_id)
         raise
 
 
