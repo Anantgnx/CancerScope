@@ -379,7 +379,9 @@ def demo_inject(req: DemoInject = DemoInject()):
         raise HTTPException(status_code=404, detail=f"{sid} not on this machine")
     if _running():
         (DATA_DIR / "inject.json").write_text(json.dumps([sid]))
-        return {"ok": True, "slide_id": sid, "mode": "joins the running tray"}
+        from pipeline.index import update_index
+        update_index(sid, status="queued", next_up=True)   # show it arrived right away; analyzed after the current slide
+        return {"ok": True, "slide_id": sid, "mode": "analyzed next"}
     _spawn([sid])
     return {"ok": True, "slide_id": sid, "mode": "processing now"}
 

@@ -234,7 +234,7 @@ function renderQueue(slides) {
     if ((done || s.status === "processing") && !img.getAttribute("src")) img.src = `/api/slide/${s.slide_id}/thumbnail?t=${Date.now()}`;
     if (s.status === "queued" || s.status === "expected") img.removeAttribute("src");
     el.querySelector(".queue-score").innerHTML = done ? s.urgency_score.toFixed(1) : `<small>${s.status === "processing" ? "···" : "—"}</small>`;
-    el.querySelector(".chip").textContent = done ? SHORT[s.category] || s.category : s.status === "processing" ? "Analyzing" : s.status === "error" ? "Error" : s.status === "expected" ? "On scanner" : "Queued";
+    el.querySelector(".chip").textContent = done ? SHORT[s.category] || s.category : s.status === "processing" ? "Analyzing" : s.status === "error" ? "Error" : s.status === "expected" ? "On scanner" : s.next_up ? "Queued · next" : "Queued";
   });
   Object.keys(cards).filter(id => !slides.some(s => s.slide_id === id)).forEach(id => { cards[id].remove(); delete cards[id]; });
   const want = slides.map(s => s.slide_id), have = [...q.children].map(e => e.dataset.id);
