@@ -14,3 +14,5 @@ pyarrow
 flask
 openai               # client for the local OpenAI-compatible LLM server
 tqdm
+fastapi
+uvicorn

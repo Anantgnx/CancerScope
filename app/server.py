@@ -84,6 +84,60 @@ def get_slide_thumbnail(slide_id: str):
     return FileResponse(thumb_path, media_type="image/png")
 
 
+# ---- Full-resolution slide tiles, pathologist outline, HTML report (used by the redesigned viewer) ----
+import io
+import sys
+from functools import lru_cache
+from fastapi.responses import Response
+
+sys.path.insert(0, str(BASE_DIR))
+import config  # noqa: E402  (slide paths)
+
+
+@lru_cache(maxsize=16)
+def _deepzoom(slide_id: str):
+    import openslide
+    from openslide.deepzoom import DeepZoomGenerator
+    path = config.slide_path(slide_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Slide {slide_id} not found")
+    # limit_bounds=False keeps full level-0 coordinates, so heatmap and bbox_px line up
+    return DeepZoomGenerator(openslide.OpenSlide(str(path)), tile_size=254, overlap=1, limit_bounds=False)
+
+
+@app.get("/slide/{slide_id}.dzi")
+def get_dzi(slide_id: str):
+    return Response(_deepzoom(slide_id).get_dzi("jpeg"), media_type="application/xml")
+
+
+@app.get("/slide/{slide_id}_files/{level}/{tile}")
+def get_tile(slide_id: str, level: int, tile: str):
+    col, row = (int(v) for v in tile.split(".")[0].split("_"))
+    try:
+        img = _deepzoom(slide_id).get_tile(level, (col, row))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Tile out of range")
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, "JPEG", quality=85)
+    return Response(buf.getvalue(), media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
+
+
+@app.get("/api/slide/{slide_id}/annotation")
+def get_annotation(slide_id: str):
+    path = DATA_DIR / slide_id / "annotation.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="No annotation for this slide")
+    return FileResponse(path, media_type="application/json")
+
+
+@app.api_route("/api/slide/{slide_id}/report.html", methods=["GET", "HEAD"])
+def get_report_html(slide_id: str):
+    path = DATA_DIR / slide_id / "report.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="No HTML report yet")
+    return FileResponse(path, media_type="text/html")
+
+
 class ReportRequest(BaseModel):
     slide_id: str
 

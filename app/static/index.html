@@ -2,40 +2,141 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Local Pathology Triage — ASUS GX10</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CancerScope · Lymph Node Triage</title>
+  <!-- Everything is served locally (app/static/vendor): the app works with the network unplugged. -->
   <link rel="stylesheet" href="/static/style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+  <script src="/static/vendor/openseadragon/openseadragon.min.js"></script>
+  <script src="/static/vendor/osd-plugins/openseadragon-scalebar.js"></script>
+  <script src="/static/vendor/osd-plugins/openseadragon-svg-overlay.js"></script>
+  <script src="/static/vendor/lucide/lucide.min.js"></script>
 </head>
 <body>
-  <div id="sidebar">
-    <div id="header">
-      <h2>Pathology Triage</h2>
-      <div id="counter-badge">⚡ <span id="gb-counter">0</span> GB Analyzed</div>
-      <div class="local-pitch-text">Local processing: 0 bytes uploaded to cloud</div>
-      
-      <button id="heatmap-toggle-btn" class="btn-heatmap" onclick="toggleHeatmap()">
-        🗺️ AI Heatmap: ON
-      </button>
+  <!-- ===== Top bar ===== -->
+  <header id="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.2"/>
+        <circle cx="16" cy="16" r="5.5" fill="currentColor"/>
+        <path d="M16 3v4M16 25v4M3 16h4M25 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="brand-name">CancerScope</div>
+        <div class="brand-sub">Lymph node metastasis triage</div>
+      </div>
     </div>
-    <div id="queue"></div>
+
+    <div class="stats">
+      <div class="stat"><span class="stat-label">Slides triaged</span><span class="stat-value" id="stat-slides">–</span></div>
+      <div class="stat"><span class="stat-label">Data analyzed</span><span class="stat-value"><span id="gb-counter">0</span> GB</span></div>
+      <div class="stat"><span class="stat-label">Urgent cases</span><span class="stat-value" id="stat-urgent">–</span></div>
+      <div class="stat stat-zero"><span class="stat-label">Uploaded to cloud</span><span class="stat-value">0 bytes</span></div>
+    </div>
+
+    <div class="device-pill" id="device-pill">
+      <span class="pulse-dot"></span>
+      <span>On-device · ASUS GX10</span>
+    </div>
+  </header>
+
+  <div id="layout">
+    <!-- ===== Left: triage queue ===== -->
+    <aside id="sidebar">
+      <div class="panel-head">
+        <div>
+          <h2>Triage queue</h2>
+          <p class="panel-sub">Most urgent first</p>
+        </div>
+        <span class="count-chip" id="queue-count">0</span>
+      </div>
+      <div id="queue"></div>
+      <div class="legend-priority">
+        <span><i class="dot prio-stat"></i>STAT</span>
+        <span><i class="dot prio-urgent"></i>Urgent</span>
+        <span><i class="dot prio-priority"></i>Priority</span>
+        <span><i class="dot prio-routine"></i>Routine</span>
+      </div>
+    </aside>
+
+    <!-- ===== Center: slide viewer ===== -->
+    <main id="main">
+      <div id="viewer"></div>
+
+      <div class="viewer-toolbar" id="viewer-toolbar">
+        <button id="heatmap-toggle-btn" class="tool-btn is-on" onclick="toggleHeatmap()" title="Show or hide the AI heatmap">
+          <i data-lucide="flame"></i><span>AI heatmap</span>
+        </button>
+        <label class="tool-slider" title="Heatmap opacity">
+          <i data-lucide="droplet"></i>
+          <input type="range" id="heatmap-opacity" min="0" max="100" value="65">
+        </label>
+        <button id="outline-toggle-btn" class="tool-btn" onclick="toggleOutline()" title="Pathologist annotation (CAMELYON16 ground truth)">
+          <i data-lucide="pen-tool"></i><span>Pathologist outline</span>
+        </button>
+        <button class="tool-btn" onclick="resetView()" title="Fit slide to screen">
+          <i data-lucide="maximize"></i><span>Fit</span>
+        </button>
+      </div>
+
+      <div class="viewer-legend" id="viewer-legend">
+        <span>Tumor probability</span>
+        <div class="legend-bar"></div>
+        <div class="legend-ticks"><span>0.2</span><span>0.6</span><span>1.0</span></div>
+      </div>
+
+      <div class="viewer-empty" id="viewer-empty">
+        <i data-lucide="scan-search"></i>
+        <p>Select a slide from the queue</p>
+      </div>
+    </main>
+
+    <!-- ===== Right: case panel ===== -->
+    <aside id="case-panel">
+      <div id="case-header" class="case-header">
+        <div class="case-id" id="case-id">No slide selected</div>
+        <div class="case-meta" id="case-meta"></div>
+      </div>
+
+      <div id="case-priority" class="priority-banner"></div>
+
+      <section class="case-section">
+        <h3>Measurements</h3>
+        <div id="case-metrics" class="metric-grid"></div>
+      </section>
+
+      <section class="case-section case-foci">
+        <h3>Suspicious foci <span class="section-hint">click to zoom</span></h3>
+        <div id="case-foci" class="foci-list"></div>
+      </section>
+
+      <div class="case-actions">
+        <button class="btn-primary" onclick="fetchReport()">
+          <i data-lucide="file-text"></i><span>Open triage report</span>
+        </button>
+      </div>
+
+      <footer class="case-footer" id="case-footer"></footer>
+    </aside>
   </div>
 
-  <div id="main">
-    <div id="viewer"></div>
-    
-    <div id="report-panel">
-      <div class="report-header">
-        <h3>Clinical Report</h3>
-        <button class="btn-close" onclick="document.getElementById('report-panel').style.display='none'">✕</button>
+  <!-- ===== Report modal ===== -->
+  <div id="report-panel" class="modal" onclick="if (event.target === this) closeReport()">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title"><i data-lucide="file-text"></i><span>Triage report</span></div>
+        <div class="modal-actions">
+          <button class="icon-btn" onclick="printReport()" title="Print"><i data-lucide="printer"></i></button>
+          <button class="icon-btn" onclick="closeReport()" title="Close"><i data-lucide="x"></i></button>
+        </div>
       </div>
-      <div id="report-content">Loading...</div>
-    </div>
-    
-    <div class="report-trigger">
-      <button class="btn-primary" onclick="fetchReport()">📋 One-Click Report</button>
+      <div id="report-content" class="modal-body"></div>
     </div>
   </div>
 
   <script src="/static/viewer.js"></script>
+  <script type="module">
+    import autoAnimate from "/static/vendor/auto-animate/index.mjs";
+    autoAnimate(document.getElementById("queue"), { duration: 450 });
+  </script>
 </body>
 </html>
