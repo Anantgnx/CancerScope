@@ -11,3 +11,6 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 *.log
+
+# demo slides swapped out of the tray (kept as backup on the GX10)
+outputs_unused/
