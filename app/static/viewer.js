@@ -54,7 +54,11 @@ function outlineLayer() {
   if (!outlineGroup) {
     const ov = viewer.svgOverlay();
     const resize = ov.resize.bind(ov);
-    ov.resize = () => { if (viewer.world.getItemCount()) resize(); };
+    ov.resize = () => {
+      const z = viewer.viewport.getZoom(true);
+      const p = viewer.viewport.pixelFromPoint(new OpenSeadragon.Point(0, 0), true);
+      if (viewer.world.getItemCount() && Number.isFinite(z) && z > 0 && Number.isFinite(p.x) && Number.isFinite(p.y)) resize();
+    };
     outlineGroup = ov.node();
   }
   return outlineGroup;
