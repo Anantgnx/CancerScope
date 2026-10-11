@@ -460,3 +460,7 @@ a.brand { color: inherit; text-decoration: none; }
 
 .log-row.is-preloaded { border-left-style: dashed; }
 .log-row.is-preloaded .log-msg { font-weight: 400; }
+
+.btn.is-busy { color: var(--accent); border-color: rgba(47, 195, 201, 0.45); opacity: 1 !important; }
+.btn.is-busy svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

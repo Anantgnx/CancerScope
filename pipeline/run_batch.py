@@ -58,11 +58,13 @@ def queue_rank(slide_id):
     return ids.index(slide_id) + 1 if slide_id in ids else None
 
 
-def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4, reports=False, use_cache=True):
+def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4, reports=False, use_cache=True,
+        started=False):
     """Process slides in order; one failure doesn't stop the batch; picks up injected slides. Returns results."""
     slide_ids = list(slide_ids)
-    set_queued(slide_ids)
-    live.run_start(slide_ids)
+    if not started:   # main() already announced the run before loading models
+        set_queued(slide_ids)
+        live.run_start(slide_ids)
     results, t0 = [], time.perf_counter()
     i = 0
     while True:
@@ -140,10 +142,16 @@ def main():
     device = config.get_device()
     print(f"device {device}" + (f" ({torch.cuda.get_device_name(0)})" if device == "cuda" else "")
           + f", {len(ids)} slides: {', '.join(ids)}", flush=True)
+    # announce the run before the slow model load, so the page shows progress immediately
+    set_queued(ids)
+    live.run_start(ids)
+    live.stage("load", None, "Loading UNI2-h (681M parameters) and the tumor classifier onto the GPU")
+    t_load = time.perf_counter()
     model = load_uni2h(device)
     classifier = load_classifier(device)
+    live.event("run", f"Models ready in {time.perf_counter() - t_load:.0f} s")
     run(ids, model, classifier, device, stride=args.stride, batch=args.batch, workers=args.workers,
-        reports=args.reports, use_cache=not args.no_cache)
+        reports=args.reports, use_cache=not args.no_cache, started=True)
 
 
 if __name__ == "__main__":

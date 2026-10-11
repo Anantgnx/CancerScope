@@ -14,10 +14,28 @@ const cards = {};
 // ---------- controls ----------
 async function post(url) { const r = await fetch(url, { method: "POST" }); return r.json().catch(() => ({})); }
 
+let preparing = false, prepStartedAt = 0;   // between pressing Start and the run reporting in
+
+function setPreparing(on) {
+  preparing = on;
+  const btn = document.getElementById("btn-start");
+  btn.classList.toggle("is-busy", on);
+  btn.innerHTML = on ? `<i data-lucide="loader-circle"></i><span>Preparing…</span>` : `<i data-lucide="play"></i><span>Start tray</span>`;
+  lucide.createIcons();
+  ["btn-start", "btn-inject", "btn-ff", "btn-reset"].forEach(id => { document.getElementById(id).disabled = on || id === "btn-inject" || id === "btn-ff"; });
+  if (on) {
+    document.getElementById("k-run").innerHTML = `<i class="state-dot is-running"></i>Preparing`;
+    document.getElementById("now-stage").textContent = "Preparing: starting the pipeline on the GX10…";
+  }
+}
+
 async function startTray() {
-  document.getElementById("btn-start").disabled = true;
+  if (preparing) return;
   injectRequested = false;
   clearLog();
+  prepStartedAt = Date.now();
+  setPreparing(true);
+  addLocalEvent("run", "Start pressed: preparing the run");
   await post("/api/demo/reset");
   await post("/api/demo/start");
   tick();
@@ -65,6 +83,11 @@ async function tickSystem() {
 function fmtTime(sec) { sec = Math.max(0, Math.round(sec || 0)); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
 
 function renderRun() {
+  if (preparing) {
+    const reported = live.run === "running" && live.started_at * 1000 >= prepStartedAt - 3000;
+    if (reported || Date.now() - prepStartedAt > 120000) setPreparing(false);
+    else return;   // keep the "Preparing…" view until the run reports in
+  }
   const running = live.run === "running";
   const done = live.run === "done";
   const state = running ? ["is-running", "Running"] : done ? ["is-ok", "Complete"] : live.run === "stopped" ? ["is-idle", "Stopped"] : ["is-idle", "Idle"];
@@ -89,7 +112,8 @@ function renderRun() {
 
 function renderGraph(running, done) {
   const cur = STAGES.indexOf(live.stage);
-  document.getElementById("graph-slide").textContent = live.slide ? `${live.slide} · stage ${cur + 1} of ${STAGES.length}` : done ? "tray complete" : "waiting for a tray";
+  document.getElementById("graph-slide").textContent = live.slide ? `${live.slide} · stage ${cur + 1} of ${STAGES.length}`
+    : done ? "tray complete" : running ? "loading models onto the GPU" : "waiting for a tray";
   document.querySelectorAll(".node").forEach(n => {
     const i = STAGES.indexOf(n.dataset.stage);
     let st = "is-idle";
@@ -166,6 +190,7 @@ function renderNow(running, done) {
   const topId = (currentSlide || "").startsWith("top:") ? currentSlide.slice(4) : null;
   document.getElementById("now-id").textContent = slide || (done ? (topId ? `#1 · ${topId}` : "Tray complete") : "–");
   document.getElementById("now-stage").textContent = slide ? stageText[live.stage] || "" :
+    running ? "Loading UNI2-h (681M parameters) and the classifier onto the GPU…" :
     done ? "Tray complete. This is the most urgent case: open the dashboard to review it first." : "Press Start to run this morning's tray.";
   const pct = live.tiles_total ? 100 * (live.tiles_done || 0) / live.tiles_total : 0;
   document.getElementById("now-bar").style.width = `${slide ? pct : done ? 100 : 0}%`;
