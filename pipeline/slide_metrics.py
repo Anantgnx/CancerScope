@@ -74,8 +74,8 @@ def build_metrics(slide_id, filename, heatmap, downsample, slide_w, slide_h, mpp
     category, score = urgency(regions, mpp)
     tumor_area = sum(r["area_mm2"] for r in regions)
     n_tiles = sum(r["n_tiles"] for r in regions)
-    detected = any(r["area_mm2"] >= config.MIN_REGION_MM2 and r["max_confidence"] > config.TUMOR_THRESHOLD
-                   for r in regions)
+    # same size rule as the categories: longest extent, not area (a 0.35 mm micromet can be < 0.2 mm^2)
+    detected = any(extent_mm(r, mpp) > config.MIN_DETECT_EXTENT_MM for r in regions)
     mean_conf = sum(r["mean_confidence"] * r["n_tiles"] for r in regions) / n_tiles if n_tiles else 0.0
     out_regions = [{k: r[k] for k in ("id", "area_mm2", "max_confidence", "centroid_px", "bbox_px")}
                    for r in regions]

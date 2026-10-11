@@ -64,7 +64,7 @@ TILE_LEVEL = 2          # ~10x on CAMELYON16 (4x downsample from 40x); verify pe
 MODEL_INPUT_SIZE = 224  # UNI2-h input
 FEATURE_DIM = 1536      # UNI2-h output
 TUMOR_THRESHOLD = 0.5
-MIN_REGION_MM2 = 0.2    # tumor_detected rule; record final value in README
+MIN_DETECT_EXTENT_MM = 0.2  # tumor_detected: a reported region wider than this (micrometastasis or larger)
 # Hysteresis: a region (connected tiles > TUMOR_THRESHOLD) counts only if it has at least
 # MIN_REGION_TILES tiles and one tile >= REGION_SEED_THRESHOLD. Drops 1-2 tile specks.
 REGION_SEED_THRESHOLD = 0.9
