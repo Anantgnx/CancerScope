@@ -212,6 +212,9 @@ function toggleOutline() {
 
 function resetView() { viewer.viewport.goHome(); }
 
+// Pranav's anomaly navigator API (merged into the "Suspicious foci" panel); kept so existing callers work
+function zoomToROI(bbox_px) { zoomToFocus({ bbox_px }); }
+
 function zoomToFocus(r) {
   const w = current.slide_width_px;
   const [x0, y0, x1, y1] = r.bbox_px;
@@ -248,7 +251,7 @@ function renderCase(m) {
 
   const foci = document.getElementById("case-foci");
   foci.innerHTML = has ? "" : `<div class="foci-empty">No suspicious foci detected</div>`;
-  m.regions.slice(0, 8).forEach((r, i) => {
+  m.regions.forEach((r, i) => {
     const [x0, y0, x1, y1] = r.bbox_px;
     const ext = Math.max(x1 - x0, y1 - y0) * mpp / 1000;
     const row = document.createElement("div");
