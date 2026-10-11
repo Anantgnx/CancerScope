@@ -238,7 +238,8 @@ def _spawn(slides, no_cache=True):
 def get_live():
     p = DATA_DIR / "live.json"
     state = json.loads(p.read_text()) if p.exists() else {"run": "idle"}
-    if state.get("run") == "running" and not _running() and _demo_proc is not None:
+    ff_active = "_ff_thread" in globals() and _ff_thread is not None and _ff_thread.is_alive()
+    if state.get("run") == "running" and not _running() and _demo_proc is not None and not ff_active:
         state["run"] = "stopped"
     state["holdout"] = DEMO_HOLDOUT
     state["holdout_available"] = config.slide_path(DEMO_HOLDOUT).exists()
@@ -376,6 +377,61 @@ def _models():
 def get_system():
     return {"online": _cached("online", 3, _online), "gpu": _cached("gpu", 1.5, _gpu),
             "llm": _cached("models", 3, _models), "run_active": _running()}
+
+
+# ---- Fast-forward: finish the tray from results computed earlier on this machine ----
+import random as _random
+import threading
+
+_ff_thread = None
+
+
+def _rank(slide_id):
+    idx = json.loads((DATA_DIR / "index.json").read_text())
+    done = sorted((e for e in idx["slides"] if e.get("status") == "done"), key=lambda e: -(e.get("urgency_score") or 0))
+    ids = [e["slide_id"] for e in done]
+    return ids.index(slide_id) + 1 if slide_id in ids else None
+
+
+def _fast_forward(remaining, stagger):
+    from pipeline import live
+    from pipeline.index import update_index
+    live.resume()
+    live._state["slides_total"] = live._state.get("slides_done", 0) + len(remaining)
+    live.event("run", f"Fast-forward: loading results for the remaining {len(remaining)} slides, "
+                      "analyzed in full earlier today on this GX10")
+    for sid in remaining:
+        m = json.loads((DATA_DIR / sid / "metrics.json").read_text())
+        update_index(sid, status="done", urgency_score=m["urgency_score"], category=m["category"],
+                     gb_processed=m["gb_processed"], filename=m["filename"], output_path=sid)
+        live.preloaded(m, rank=_rank(sid))
+        _time.sleep(stagger)
+    live.run_done()
+
+
+class DemoFastForward(BaseModel):
+    include_holdout: bool = True
+    stagger: float = 0.3
+
+
+@app.post("/api/demo/fastforward")
+def demo_fastforward(req: DemoFastForward = DemoFastForward()):
+    global _ff_thread
+    if _ff_thread is not None and _ff_thread.is_alive():
+        return JSONResponse({"ok": False, "detail": "Fast-forward already running"}, status_code=409)
+    if _running():
+        _demo_proc.terminate()
+        _demo_proc.wait(timeout=15)
+    (DATA_DIR / "inject.json").unlink(missing_ok=True)
+    idx = json.loads((DATA_DIR / "index.json").read_text()) if (DATA_DIR / "index.json").exists() else {"slides": []}
+    status = {e["slide_id"]: e.get("status") for e in idx["slides"]}
+    wanted = _tray() + ([DEMO_HOLDOUT] if req.include_holdout and config.slide_path(DEMO_HOLDOUT).exists() else [])
+    remaining = [s for s in wanted if status.get(s) != "done" and (DATA_DIR / s / "metrics.json").exists()]
+    _random.shuffle(remaining)  # scanner order, so the queue visibly re-sorts
+    missing = [s for s in wanted if status.get(s) != "done" and s not in remaining]
+    _ff_thread = threading.Thread(target=_fast_forward, args=(remaining, req.stagger), daemon=True)
+    _ff_thread.start()
+    return {"ok": True, "preloading": remaining, "no_stored_result": missing}
 
 
 if __name__ == "__main__":

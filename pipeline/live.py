@@ -106,3 +106,36 @@ def set_idle():
     config.OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
     _paths()[1].write_text("")
     _write(force=True)
+
+
+def resume():
+    """Continue an existing run's state and event numbering from disk (used by the server's fast-forward)."""
+    global _state, _seq
+    live_path, events_path = _paths()
+    _state = json.loads(live_path.read_text()) if live_path.exists() else {"run": "idle"}
+    _seq = 0
+    if events_path.exists():
+        for line in events_path.read_text().splitlines():
+            try:
+                _seq = max(_seq, json.loads(line).get("seq", 0))
+            except json.JSONDecodeError:
+                pass
+    if _state.get("run") != "running":   # fast-forward from idle: start a fresh run record
+        _state.update(run="running", started_at=time.time(), slides_total=0, slides_done=0, gb_done=0.0,
+                      tiles_done_total=0, first_urgent_sec=None, results=[])
+    _state.update(slide=None, stage=None, tiles_done=0, tiles_total=0, tiles_per_sec=0.0)
+
+
+def preloaded(m, rank=None):
+    """Record a result loaded from disk (computed in an earlier run on this machine), clearly labeled."""
+    _state["slides_done"] = _state.get("slides_done", 0) + 1
+    _state["gb_done"] = round(_state.get("gb_done", 0) + m["gb_processed"], 2)
+    if m["category"] in URGENT and _state.get("first_urgent_sec") is None and _state.get("started_at"):
+        _state["first_urgent_sec"] = round(time.time() - _state["started_at"], 1)
+    _state.setdefault("results", []).append({"slide_id": m["slide_id"], "category": m["category"],
+                                             "urgency_score": m["urgency_score"], "preloaded": True})
+    size = f"{m['largest_region_extent_mm']:.2f} mm, " if m["num_tumor_regions"] else ""
+    where = f" → #{rank}" if rank else ""
+    event("result", f"{m['category']} · {size}urgency {m['urgency_score']:.2f}{where} (preloaded)", m["slide_id"],
+          category=m["category"], urgency=m["urgency_score"], rank=rank, preloaded=True)
+    _write(force=True)

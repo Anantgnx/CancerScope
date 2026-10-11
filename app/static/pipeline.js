@@ -30,6 +30,15 @@ async function injectUrgent() {
   addLocalEvent("inject", `Requested: ${r.slide_id} arriving from the scanner (${r.mode || "queued"})`, r.slide_id);
 }
 
+let ffRequested = false;
+async function fastForward() {
+  ffRequested = true;
+  document.getElementById("btn-ff").disabled = true;
+  document.getElementById("btn-inject").disabled = true;
+  await post("/api/demo/fastforward");
+  tick();
+}
+
 // ---------- polling ----------
 async function tick() {
   try {
@@ -68,7 +77,9 @@ function renderRun() {
   document.getElementById("btn-start").disabled = running;
   document.getElementById("btn-start").querySelector("span").textContent = done ? "Run again" : "Start tray";
   const injected = Object.keys(cards).includes(live.holdout);
-  document.getElementById("btn-inject").disabled = !running || !live.holdout_available || injected || injectRequested;
+  document.getElementById("btn-inject").disabled = !running || !live.holdout_available || injected || injectRequested || ffRequested;
+  document.getElementById("btn-ff").disabled = !running || ffRequested;
+  if (!running) ffRequested = false;
   document.getElementById("btn-review").classList.toggle("btn-accent", done);
 
   renderGraph(running, done);
@@ -208,14 +219,14 @@ function updateLogCount() { document.getElementById("log-count").textContent = `
 function addEvent(e) {
   lastSeq = Math.max(lastSeq, e.seq);
   if (e.kind === "report") lastReport = e.msg.split(" · ")[0].replace("Report drafted in ", "");
-  appendLog(e.ts, e.kind, e.slide_id, e.msg, e.category);
+  appendLog(e.ts, e.kind, e.slide_id, e.msg, e.category, e.preloaded);
 }
 function addLocalEvent(kind, msg, slideId) { appendLog(Date.now() / 1000, kind, slideId, msg); }
 
-function appendLog(ts, kind, slideId, msg, category) {
+function appendLog(ts, kind, slideId, msg, category, preloaded) {
   const log = document.getElementById("log");
   const row = document.createElement("div");
-  row.className = `log-row kind-${kind} ${category ? PRIO[category] || "" : ""}`;
+  row.className = `log-row kind-${kind} ${category ? PRIO[category] || "" : ""}${preloaded ? " is-preloaded" : ""}`;
   const t = new Date(ts * 1000).toLocaleTimeString([], { hour12: false });
   row.innerHTML = `<span class="log-time mono">${t}</span><span class="log-slide mono">${slideId || ""}</span><span class="log-msg">${msg}</span>`;
   log.appendChild(row);
