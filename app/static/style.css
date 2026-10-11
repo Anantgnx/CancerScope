@@ -28,6 +28,20 @@ body {
 .slide-item.active { border-left-color: var(--accent); background: #30363d; }
 .urgent { color: var(--accent); font-weight: bold; }
 
+/* Cleaned up queue styles */
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.queue-meta { font-size: 0.8rem; color: #8b949e; margin-top: 4px; }
+.score { color: var(--text); }
+
+/* New ROI Navigator Panel */
+#roi-panel { padding: 12px; border-top: 1px solid var(--border); background: #161b22; }
+.roi-title { font-size: 0.9rem; margin: 0 0 8px 0; color: #c9d1d9; text-transform: uppercase; letter-spacing: 0.5px; }
+.roi-empty { font-size: 0.85rem; color: #8b949e; font-style: italic; }
+.roi-item { padding: 8px; margin-bottom: 6px; background: #21262d; border-radius: 4px; border: 1px solid #30363d; cursor: pointer; transition: 0.2s; }
+.roi-item:hover { background: #30363d; border-color: #8b949e; }
+.roi-confidence { color: #f85149; font-weight: bold; font-size: 0.85rem; }
+.roi-meta { font-size: 0.75rem; color: #8b949e; margin-top: 2px; }
+
 /* Badges & Text */
 #counter-badge { background: #238636; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; display: inline-block; }
 .local-pitch-text { font-size: 0.75rem; color: #8b949e; margin-top: 6px; }
