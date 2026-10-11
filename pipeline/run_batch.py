@@ -45,7 +45,7 @@ def take_injected(queue):
     if new:
         set_queued(new)
         for s in new:
-            live.event("inject", "New slide arrived from the scanner and joined the tray", s)
+            live.event("inject", "New slide arrived from the scanner; analyzing it next", s)
     return new
 
 
@@ -66,7 +66,8 @@ def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4, rep
     results, t0 = [], time.perf_counter()
     i = 0
     while True:
-        slide_ids += take_injected(slide_ids)  # checked between slides, including after the last one
+        # injected slides (an urgent case from the scanner) go next, not to the back of the tray
+        slide_ids[i:i] = take_injected(slide_ids)
         live._state["slides_total"] = len(slide_ids)
         if i >= len(slide_ids):
             break

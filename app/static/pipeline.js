@@ -8,6 +8,7 @@ let live = { run: "idle" };
 let lastSeq = 0;
 let currentSlide = null;
 let lastReport = null;
+let injectRequested = false;   // stays true until the next reset/start, so the button can't be pressed twice
 const cards = {};
 
 // ---------- controls ----------
@@ -15,13 +16,15 @@ async function post(url) { const r = await fetch(url, { method: "POST" }); retur
 
 async function startTray() {
   document.getElementById("btn-start").disabled = true;
+  injectRequested = false;
   clearLog();
   await post("/api/demo/reset");
   await post("/api/demo/start");
   tick();
 }
-async function resetTray() { await post("/api/demo/reset"); clearLog(); currentSlide = null; tick(); }
+async function resetTray() { await post("/api/demo/reset"); clearLog(); currentSlide = null; injectRequested = false; tick(); }
 async function injectUrgent() {
+  injectRequested = true;
   document.getElementById("btn-inject").disabled = true;
   const r = await post("/api/demo/inject");
   addLocalEvent("inject", `Requested: ${r.slide_id} arriving from the scanner (${r.mode || "queued"})`, r.slide_id);
@@ -65,7 +68,7 @@ function renderRun() {
   document.getElementById("btn-start").disabled = running;
   document.getElementById("btn-start").querySelector("span").textContent = done ? "Run again" : "Start tray";
   const injected = Object.keys(cards).includes(live.holdout);
-  document.getElementById("btn-inject").disabled = !running || !live.holdout_available || injected;
+  document.getElementById("btn-inject").disabled = !running || !live.holdout_available || injected || injectRequested;
   document.getElementById("btn-review").classList.toggle("btn-accent", done);
 
   renderGraph(running, done);
@@ -125,24 +128,34 @@ function drawEdges() {
 function renderNow(running, done) {
   const thumb = document.getElementById("now-thumb"), heat = document.getElementById("now-heat");
   const slide = live.slide;
-  document.getElementById("now-empty").style.display = slide ? "none" : "";
+  document.getElementById("now-empty").style.display = slide || done ? "none" : "";
   if (slide && slide !== currentSlide) {
     currentSlide = slide;
     thumb.src = `/api/slide/${slide}/thumbnail?t=${Date.now()}`;
     heat.removeAttribute("src");
     if (window.gsap) gsap.from(".now-visual, .now-info > *", { opacity: 0, y: 6, duration: 0.35, stagger: 0.03 });
   }
-  if (slide && running) heat.src = `/api/slide/${slide}/heatmap_live?t=${Date.now()}`;
-  if (!slide) { thumb.removeAttribute("src"); heat.removeAttribute("src"); currentSlide = null; }
+  const scoring = ["embed", "classify", "regions", "urgency", "report"].includes(live.stage);
+  if (slide && running && scoring && live.tiles_done) heat.src = `/api/slide/${slide}/heatmap_live?t=${Date.now()}`;
+  if (!slide) {
+    // finished: show the most urgent case instead of an empty box
+    const top = done ? [...(live.results || [])].sort((a, b) => b.urgency_score - a.urgency_score)[0] : null;
+    if (top && currentSlide !== `top:${top.slide_id}`) {
+      currentSlide = `top:${top.slide_id}`;
+      thumb.src = `/api/slide/${top.slide_id}/thumbnail`;
+      heat.src = `/api/slide/${top.slide_id}/heatmap`;
+    } else if (!top) { thumb.removeAttribute("src"); heat.removeAttribute("src"); currentSlide = null; }
+  }
 
   const stageText = {
     read: "Reading the gigapixel slide image", tissue: "Finding tissue, skipping blank glass", tile: "Cutting tissue into 10× tiles",
     embed: "UNI2-h embedding tiles on the GPU, classifier scoring as they stream", classify: "Scoring every tile for tumor",
     regions: "Grouping tumor tiles into foci", urgency: "Ranking by clinical size rules", report: "Nemotron drafting the report",
   };
-  document.getElementById("now-id").textContent = slide || (done ? "Tray complete" : "–");
+  const topId = (currentSlide || "").startsWith("top:") ? currentSlide.slice(4) : null;
+  document.getElementById("now-id").textContent = slide || (done ? (topId ? `#1 · ${topId}` : "Tray complete") : "–");
   document.getElementById("now-stage").textContent = slide ? stageText[live.stage] || "" :
-    done ? "Every slide triaged. Open the dashboard to review the most urgent case." : "Press Start to run this morning's tray.";
+    done ? "Tray complete. This is the most urgent case: open the dashboard to review it first." : "Press Start to run this morning's tray.";
   const pct = live.tiles_total ? 100 * (live.tiles_done || 0) / live.tiles_total : 0;
   document.getElementById("now-bar").style.width = `${slide ? pct : done ? 100 : 0}%`;
   document.getElementById("now-tiles").textContent = live.tiles_total ? `${(live.tiles_done || 0).toLocaleString()} / ${live.tiles_total.toLocaleString()}` : "–";
