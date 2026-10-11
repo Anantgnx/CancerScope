@@ -25,13 +25,26 @@
   <div id="sidebar">
     <div id="header">
       <h2 style="margin:0 0 4px 0; font-size: 1.2rem;">Pathology Triage</h2>
-      <div id="counter-badge">⚡ <span id="gb-counter">0</span> GB Analyzed | 0 Bytes Uploaded</div>
+      
+      <!-- Streamlined GB Badge -->
+      <div id="counter-badge">⚡ <span id="gb-counter">0</span> GB Analyzed</div>
+      
+      <!-- Core pitch requirement restyled for better UI -->
+      <div style="font-size: 0.75rem; color: #8b949e; margin-top: 6px;">
+        Local processing: 0 bytes uploaded to cloud
+      </div>
+      
+      <!-- Toggle button moved to sidebar -->
+      <button id="heatmap-toggle-btn" onclick="toggleHeatmap()" style="margin-top: 16px; width: 100%; background: #1f6feb; color: white; border: 1px solid #388bfd; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">
+        🗺️ AI Heatmap: ON
+      </button>
     </div>
     <div id="queue"></div>
   </div>
 
   <div id="main">
     <div id="viewer"></div>
+    
     <div id="report-panel">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
         <h3 style="margin:0;">Clinical Report</h3>
@@ -39,9 +52,7 @@
       </div>
       <div id="report-content" style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.4;">Loading...</div>
     </div>
-    <div style="position: absolute; top: 20px; left: 20px; z-index: 10;">
-      <button onclick="toggleHeatmap()" style="background: #1f6feb; border: 1px solid #388bfd; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🗺️ Toggle AI Heatmap</button>
-    </div>
+    
     <div style="position: absolute; bottom: 20px; left: 20px; z-index: 10;">
       <button onclick="fetchReport()">📋 One-Click Report</button>
     </div>

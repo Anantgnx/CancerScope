@@ -14,7 +14,10 @@ function initViewer() {
     showNavigationControl: true,
     animationTime: 0.5,
     blendTime: 0.1,
-    maxZoomPixelRatio: 2
+    // Increase this from 2 to 10 or higher to allow massive zoom on flat images
+    maxZoomPixelRatio: 15, 
+    // Ensures zooming out always snaps to fit the screen
+    minZoomImageRatio: 0.9 
   });
 }
 
@@ -60,15 +63,20 @@ async function selectSlide(slideId, element) {
     element.classList.add("active");
   }
 
-  // 1. Load the slide's actual thumbnail as the base layer
+  // Reset the button UI back to ON for the new slide
+  const btn = document.getElementById("heatmap-toggle-btn");
+  if (btn) {
+    btn.innerText = "🗺️ AI Heatmap: ON";
+    btn.style.background = "#1f6feb";
+    btn.style.border = "1px solid #388bfd";
+  }
+
   viewer.open({
     type: 'image',
     url: `/api/slide/${slideId}/thumbnail`
   });
 
-  // 2. Wait for the base thumbnail to open, then overlay the heatmap
   viewer.addHandler('open', function overlayHeatmap() {
-    // Remove the handler immediately so it doesn't trigger multiple times
     viewer.removeHandler('open', overlayHeatmap);
     
     viewer.addSimpleImage({
@@ -85,8 +93,21 @@ async function selectSlide(slideId, element) {
 function toggleHeatmap() {
   if (heatmapLayer) {
     const currentOpacity = heatmapLayer.getOpacity();
-    // Toggle between 65% visibility and 0% (hidden)
-    heatmapLayer.setOpacity(currentOpacity > 0 ? 0 : 0.65);
+    const btn = document.getElementById("heatmap-toggle-btn");
+    
+    if (currentOpacity > 0) {
+      // Turn OFF
+      heatmapLayer.setOpacity(0);
+      btn.innerText = "🗺️ AI Heatmap: OFF";
+      btn.style.background = "#21262d"; // Dark background to look inactive
+      btn.style.border = "1px solid #30363d";
+    } else {
+      // Turn ON
+      heatmapLayer.setOpacity(0.65);
+      btn.innerText = "🗺️ AI Heatmap: ON";
+      btn.style.background = "#1f6feb"; // Blue background to look active
+      btn.style.border = "1px solid #388bfd";
+    }
   }
 }
 
