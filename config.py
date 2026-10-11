@@ -70,6 +70,6 @@ MIN_DETECT_EXTENT_MM = 0.2  # tumor_detected: a reported region wider than this 
 REGION_SEED_THRESHOLD = 0.9
 MIN_REGION_TILES = 2
 
-# --- LLM (OpenAI-compatible local server; confirm on GX10) ---
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:8000/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "nemotron")
+# --- LLM: Nemotron via Ollama on the GX10 (OpenAI-compatible); disable reasoning when calling ---
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "nemotron3:33b")

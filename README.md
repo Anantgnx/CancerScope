@@ -23,7 +23,8 @@ python -m pipeline.make_sample_outputs        # fake outputs in outputs/_sample/
 python -m pipeline.extract_pcam_features      # Phase A: PCam -> UNI2-h features
 python -m pipeline.train_classifier           # Phase A: -> models/trained/tumor_classifier.pt
 python -m pipeline.process_slide tumor_091    # Phase B: one slide -> outputs/tumor_091/
-python -m pipeline.run_batch                  # all slides, live index.json updates
+python -m pipeline.run_batch                  # all slides, live index.json updates (--reports: also write reports)
+python -m pipeline.report                     # report.md + report.html per slide (Nemotron impression, numbers verified)
 python -m eval.compare_annotations            # accuracy vs. PCam test + CAMELYON16 outlines
 CANCERSCOPE_OUTPUTS=outputs/_sample python -m app.server   # app on sample data
 ```
@@ -37,6 +38,7 @@ Per slide, `outputs/<slide_id>/`: `heatmap.png`, `heatmap.npy`, `thumbnail.png`,
 - `largest_region_extent_mm`: longest bbox side of the largest region; drives the category.
 - `heatmap_width`, `heatmap_height`: heatmap grid size in pixels.
 - `outputs/<slide_id>/annotation.json` (tumor slides only, written by `eval.compare_annotations`): pathologist outline as `{"tumor": [[[x, y], ...], ...], "exclusion": [...]}` in level-0 px, for drawing over the slide in the viewer (demo step 4).
+- `outputs/<slide_id>/report.md` and `report.html` (written by `pipeline.report`): triage report. Header, findings, priority and recommendation are rendered by code from metrics.json; only the 2–3 sentence impression comes from Nemotron, and it is rejected (retried, then replaced by a template) if it contains any number not in the findings or interpretive wording ("additional", "likely", "carcinoma", ...). Priority follows category: Macrometastasis STAT, Micrometastasis URGENT, ITC PRIORITY, Negative ROUTINE.
 - `outputs/eval/<slide_id>_compare.png`: pathologist outline | our heatmap | overlay, for the evidence slide.
 
 **Heatmap alignment.** The grid is `ceil(slide_w / ds) x ceil(slide_h / ds)`, so it overhangs the right and bottom slide edges by less than one cell. Place the overlay with level-0 width `heatmap_width * heatmap_downsample` (not `slide_width_px`); in OpenSeadragon viewport units that is `heatmap_width * heatmap_downsample / slide_width_px`. `heatmap.npy` is float32 tumor probability, 0 outside tissue.

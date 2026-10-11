@@ -27,7 +27,7 @@ def is_done(slide_id):
     return (config.slide_output_dir(slide_id) / "metrics.json").exists()
 
 
-def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4):
+def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4, reports=False):
     """Process slides in the given order; one failure doesn't stop the batch. Returns per-slide results."""
     set_queued(slide_ids)
     results, t0 = [], time.perf_counter()
@@ -36,6 +36,10 @@ def run(slide_ids, model, classifier, device, stride=1, batch=64, workers=4):
         try:
             m = process_slide(sid, model=model, classifier=classifier, device=device,
                               stride=stride, batch=batch, workers=workers)
+            if reports:
+                from pipeline.report import write_report
+                _, _, source = write_report(sid)
+                print(f"  report: {source}", flush=True)
             results.append({"slide_id": sid, "ok": True, **{k: m[k] for k in
                             ("category", "urgency_score", "gb_processed", "processing_time_sec")}})
         except Exception as e:  # noqa: BLE001 -- keep the tray moving; status is already "error"
@@ -66,6 +70,7 @@ def main():
     ap.add_argument("--stride", type=int, default=1)
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--reports", action="store_true", help="write report.md/.html (Nemotron) after each slide")
     args = ap.parse_args()
 
     ids = args.slides.split(",") if args.slides else all_slide_ids()
@@ -89,7 +94,8 @@ def main():
           + f", {len(ids)} slides: {', '.join(ids)}", flush=True)
     model = load_uni2h(device)
     classifier = load_classifier(device)
-    run(ids, model, classifier, device, stride=args.stride, batch=args.batch, workers=args.workers)
+    run(ids, model, classifier, device, stride=args.stride, batch=args.batch, workers=args.workers,
+        reports=args.reports)
 
 
 if __name__ == "__main__":
