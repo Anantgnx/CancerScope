@@ -60,25 +60,24 @@ async function selectSlide(slideId, element) {
     element.classList.add("active");
   }
 
-  // Clear previous slide layers
-  viewer.world.removeAll();
+  // 1. Load the slide's actual thumbnail as the base layer
+  viewer.open({
+    type: 'image',
+    url: `/api/slide/${slideId}/thumbnail`
+  });
 
-  // 1. Load the base "Tissue Cells" Layer
-  // (Using a public sample DZI for tonight's frontend prep. 
-  // Once Anant finishes, change this URL to point to his local .dzi output)
-  viewer.addTiledImage({
-    tileSource: "https://openseadragon.github.io/example-images/highsmith/highsmith.dzi",
-    success: function() {
-      
-      // 2. Load the AI Heatmap as an overlay on top
-      viewer.addSimpleImage({
-        url: `/api/slide/${slideId}/heatmap`,
-        opacity: 0.65, // 65% opacity so you can see cells underneath
-        success: function(event) {
-          heatmapLayer = event.item;
-        }
-      });
-    }
+  // 2. Wait for the base thumbnail to open, then overlay the heatmap
+  viewer.addHandler('open', function overlayHeatmap() {
+    // Remove the handler immediately so it doesn't trigger multiple times
+    viewer.removeHandler('open', overlayHeatmap);
+    
+    viewer.addSimpleImage({
+      url: `/api/slide/${slideId}/heatmap`,
+      opacity: 0.65,
+      success: function(event) {
+        heatmapLayer = event.item;
+      }
+    });
   });
 }
 
